@@ -3,6 +3,8 @@
 //
 #include <winsock2.h>
 #include <iostream>
+#include <thread>
+
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
 #include "../include/Game/State.h"
@@ -49,7 +51,7 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
            0, (const struct sockaddr *) &clientSocketAddress,
            sizeof(clientSocketAddress));
 
-    cout<<"Hello message sent from server to client."<<endl;
+    cout<<"message: "<<message<<". sent from server to client."<<endl;
 }
 
 sockaddr_in Server::receiveMessage() {
@@ -81,7 +83,9 @@ sockaddr_in Server::receiveMessage() {
 }
 
 void Server::addClient(sockaddr_in client) {
+    lock_guard<mutex> lock(clientAddressMutex);
     clientAddresses.insert(client);
+    //unlocks mutex here bcuz out of scope
 }
 
 void Server::broadcastToClients(string message, sockaddr_in sender) {
@@ -92,7 +96,11 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
         return;
     }
 
-    for(auto client : clientAddresses) {
+    lock_guard<mutex> lock(clientAddressMutex);
+    auto clientAddressesCopy = clientAddresses;
+    lock_guard<mutex> unlock(clientAddressMutex);
+
+    for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
             //Client equals sender, doesn't need to get its own update
             continue;
@@ -102,11 +110,13 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 }
 
 void Server::runEventLoop() {
+    vector<thread> threads;
     start();
     while (true) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         //TODO make sure the updated state given from a client is legitimate
-        broadcastToClients(buffer, sender); //TODO do the broadcasting in a different thread, start a new thread for processing, serialization and brpadcasting
+        string message = buffer;//This should be a copy of the message from a client
+        threads.emplace_back(&Server::broadcastToClients, this, message, sender);
     }
 }
 
