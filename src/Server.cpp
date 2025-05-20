@@ -5,14 +5,13 @@
 #include <iostream>
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
+#include "../include/Game/State.h"
 
 using namespace std;
 
 void Server::start() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
-
-    int clientAddressLength = sizeof(clientAddress);
 
     socketFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0); //ipv4 udp socket
 
@@ -31,12 +30,6 @@ void Server::start() {
     }
 
     cout << "Socket bind success\n";
-}
-
-int Server::cleanup() {
-    closesocket(socketFileDescriptor);
-    WSACleanup();
-    return 0;
 }
 
 Server::Server(int bufferSize, int serverPort) {
@@ -59,24 +52,65 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
     cout<<"Hello message sent from server to client."<<endl;
 }
 
-void Server::receiveMessage() {
+sockaddr_in Server::receiveMessage() {
+    struct sockaddr_in clientAddress{};
+    memset(&clientAddress, 0, sizeof(clientAddress));
     int clientAddressLength = sizeof(clientAddress);
 
+
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
-                                 0, ( struct sockaddr *)&clientAddress,
+                                 0, (struct sockaddr *)&clientAddress,
                                  &clientAddressLength);
 
-    //TODO save client address stuff in thread safe list for broadcasting changes in state
 
     if (receivedBytes == SOCKET_ERROR) {
         cerr << "recvfrom failed with error: " << WSAGetLastError() << endl;
         closesocket(socketFileDescriptor);
         WSACleanup();
-        return;
+        throw runtime_error("Failed to receive bytes");
     }
 
+    addClient(clientAddress);
+
     //TODO check that no overflow in buffer
+
     buffer[receivedBytes] = '\0';
 
     cout << "Received: " << buffer << endl;
+    return clientAddress;
+}
+
+void Server::addClient(sockaddr_in client) {
+    clientAddresses.insert(client);
+}
+
+void Server::broadcastToClients(string message, sockaddr_in sender) {
+    sockaddr_in_comparator socketAddressComparator;
+    if (message == "idgen") {
+        //The first message a client sends and the client is requesting the server to generate a gamer id
+        sendMessageToClient(sender, to_string(++nextPLayerId));
+        return;
+    }
+
+    for(auto client : clientAddresses) {
+        if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
+            //Client equals sender, doesn't need to get its own update
+            continue;
+        }
+        sendMessageToClient(client, message);
+    }
+}
+
+void Server::runEventLoop() {
+    start();
+    while (true) {
+        sockaddr_in sender = receiveMessage(); //Message lies in buffer
+        //TODO make sure the updated state given from a client is legitimate
+        broadcastToClients(buffer, sender); //TODO do the broadcasting in a different thread, start a new thread for processing, serialization and brpadcasting
+    }
+}
+
+Server::~Server() {
+    closesocket(socketFileDescriptor);
+    WSACleanup();
 }

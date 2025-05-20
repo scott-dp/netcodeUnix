@@ -3,6 +3,7 @@
 #include <string>
 #include "include/Server.h"
 #include "include/Client.h"
+#include "include/Game/State.h"
 
 using namespace std;
 
@@ -14,6 +15,7 @@ void runServer();
 void runClient();
 
 int main(int argc, char *argv[]) {
+    //Always start server before client
     string programType;
     if (argc == 2) {//correctly formatted command line
         programType = argv[1];//"c" for client, "s" for server
@@ -40,14 +42,13 @@ int main(int argc, char *argv[]) {
 
 void runServer() {
     Server server(bufferSize, serverPort);
-    server.start();
-    server.receiveMessage();
-    server.cleanup();
+    server.runEventLoop();
 }
 
 void runClient() {
+    State localState;
     Client client(bufferSize, serverPort, serverIp);
-    client.start();
-    client.sendMessageToServer("Hi server");
-    client.cleanup();
+    //TODO start these in different threads
+    client.runGameEventLoop();
+    client.runReceiveThread();
 }

@@ -12,5 +12,6 @@ private:
     int yPos;
 public:
     Player(int id, int xPos, int yPos);
+    int getId();
 };
 #endif //EKSAMEN_PLAYER_H
