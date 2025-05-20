@@ -3,6 +3,7 @@
 #include <string>
 #include "include/Server.h"
 #include "include/Client.h"
+#include "include/State.h"
 
 using namespace std;
 
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
 }
 
 void runServer() {
+    State authoritativeState();
     Server server(bufferSize, serverPort);
     server.start();
     server.receiveMessage();
@@ -46,6 +48,7 @@ void runServer() {
 }
 
 void runClient() {
+    State localState();
     Client client(bufferSize, serverPort, serverIp);
     client.start();
     client.sendMessageToServer("Hi server");

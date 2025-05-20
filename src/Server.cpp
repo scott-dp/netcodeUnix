@@ -12,8 +12,6 @@ void Server::start() {
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-    int clientAddressLength = sizeof(clientAddress);
-
     socketFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0); //ipv4 udp socket
 
     if (socketFileDescriptor < 0) {
@@ -60,13 +58,15 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
 }
 
 void Server::receiveMessage() {
+    struct sockaddr_in clientAddress{};
+    memset(&clientAddress, 0, sizeof(clientAddress));
     int clientAddressLength = sizeof(clientAddress);
+
 
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
                                  0, ( struct sockaddr *)&clientAddress,
                                  &clientAddressLength);
 
-    //TODO save client address stuff in thread safe list for broadcasting changes in state
 
     if (receivedBytes == SOCKET_ERROR) {
         cerr << "recvfrom failed with error: " << WSAGetLastError() << endl;
@@ -75,8 +75,20 @@ void Server::receiveMessage() {
         return;
     }
 
+    addClient(clientAddress);
+
     //TODO check that no overflow in buffer
     buffer[receivedBytes] = '\0';
 
     cout << "Received: " << buffer << endl;
+}
+
+void Server::addClient(sockaddr_in client) {
+    clientAddresses.insert(client);
+}
+
+void Server::broadcastToClients(string message) {
+    for(auto client : clientAddresses) {
+        sendMessageToClient(client, message);
+    }
 }
