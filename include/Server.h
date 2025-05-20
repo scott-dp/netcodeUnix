@@ -14,11 +14,13 @@ using namespace std;
 class Server {
 public:
     Server(int bufferSize, int serverPort);
+    ~Server();
+    void runEventLoop();
+private:
+    void broadcastToClients(string message);
+    int cleanup();
     void start();
     void receiveMessage();
-    int cleanup();
-    void broadcastToClients(string message);
-private:
     void addClient(sockaddr_in client);
     set<sockaddr_in, sockaddr_in_comparator> clientAddresses;
     int bufferSize;

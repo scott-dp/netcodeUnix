@@ -42,9 +42,7 @@ int main(int argc, char *argv[]) {
 void runServer() {
     State authoritativeState();
     Server server(bufferSize, serverPort);
-    server.start();
-    server.receiveMessage();
-    server.cleanup();
+    server.runEventLoop();
 }
 
 void runClient() {

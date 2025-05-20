@@ -92,3 +92,16 @@ void Server::broadcastToClients(string message) {
         sendMessageToClient(client, message);
     }
 }
+
+void Server::runEventLoop() {
+    start();
+    while (true) {
+        receiveMessage(); //Message lies in buffer
+        //TODO make sure the updated state given from a client is legitimate
+        broadcastToClients(buffer);
+    }
+}
+
+Server::~Server() {
+    cleanup();
+}
