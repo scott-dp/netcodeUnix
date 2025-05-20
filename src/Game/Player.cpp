@@ -2,9 +2,11 @@
 // Created by scott on 19.05.2025.
 //
 
-#include "../include/Player.h"
+#include "../../include/Game/Player.h"
+
 #include <stdexcept>
 #include <sstream>
+
 using namespace std;
 
 const int maxMapWidth = 100;

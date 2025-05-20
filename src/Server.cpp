@@ -5,7 +5,7 @@
 #include <iostream>
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
-#include "../include/State.h"
+#include "../include/Game/State.h"
 
 using namespace std;
 
@@ -52,14 +52,14 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
     cout<<"Hello message sent from server to client."<<endl;
 }
 
-void Server::receiveMessage() {
+sockaddr_in Server::receiveMessage() {
     struct sockaddr_in clientAddress{};
     memset(&clientAddress, 0, sizeof(clientAddress));
     int clientAddressLength = sizeof(clientAddress);
 
 
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
-                                 0, ( struct sockaddr *)&clientAddress,
+                                 0, (struct sockaddr *)&clientAddress,
                                  &clientAddressLength);
 
 
@@ -67,35 +67,46 @@ void Server::receiveMessage() {
         cerr << "recvfrom failed with error: " << WSAGetLastError() << endl;
         closesocket(socketFileDescriptor);
         WSACleanup();
-        return;
+        throw runtime_error("Failed to receive bytes");
     }
 
     addClient(clientAddress);
 
     //TODO check that no overflow in buffer
+
     buffer[receivedBytes] = '\0';
 
     cout << "Received: " << buffer << endl;
+    return clientAddress;
+
 }
 
 void Server::addClient(sockaddr_in client) {
     clientAddresses.insert(client);
 }
 
-void Server::broadcastToClients(string message) {
-    //TODO dont send to sender of update
+void Server::broadcastToClients(string message, sockaddr_in sender) {
+    sockaddr_in_comparator socketAddressComparator;
+    if (message == "idgen") {
+        sendMessageToClient(sender, to_string(++nextPLayerId));
+        return;
+    }
+
     for(auto client : clientAddresses) {
+        if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
+            //Client equals sender, doesn't need to get its own update
+            continue;
+        }
         sendMessageToClient(client, message);
     }
 }
 
 void Server::runEventLoop() {
-    State authoritativeState;
     start();
     while (true) {
-        receiveMessage(); //Message lies in buffer
+        sockaddr_in sender = receiveMessage(); //Message lies in buffer
         //TODO make sure the updated state given from a client is legitimate
-        broadcastToClients(buffer); //TODO do the brpadcasting in a different thread, start a new thread for processing, serialization and brpadcasting
+        broadcastToClients(buffer, sender); //TODO do the broadcasting in a different thread, start a new thread for processing, serialization and brpadcasting
     }
 }
 

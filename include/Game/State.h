@@ -15,7 +15,6 @@ class State {
 public:
     vector<Player> players;
     void addPlayer(Player player);
-    State parseState(string state);
 private:
 };
 

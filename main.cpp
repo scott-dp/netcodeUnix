@@ -3,7 +3,7 @@
 #include <string>
 #include "include/Server.h"
 #include "include/Client.h"
-#include "include/State.h"
+#include "include/Game/State.h"
 
 using namespace std;
 
@@ -15,6 +15,7 @@ void runServer();
 void runClient();
 
 int main(int argc, char *argv[]) {
+    //Always start server before client
     string programType;
     if (argc == 2) {//correctly formatted command line
         programType = argv[1];//"c" for client, "s" for server

@@ -4,7 +4,8 @@
 #include <winsock2.h>
 #include <vector>
 #include <set>
-#include "../src/sockaddr_in_comparator.h"
+#include "sockaddr_in_comparator.h"
+#include "Game/State.h"
 
 #ifndef EKSAMEN_SERVER_H
 #define EKSAMEN_SERVER_H
@@ -17,9 +18,11 @@ public:
     ~Server();
     void runEventLoop();
 private:
-    void broadcastToClients(string message);
+    State authoritativeState;
+    int nextPLayerId = 1;
+    void broadcastToClients(string message, sockaddr_in sender);
     void start();
-    void receiveMessage();
+    sockaddr_in receiveMessage();
     void addClient(sockaddr_in client);
     /**
      * This set can be written to by the receive message thread. At the same time

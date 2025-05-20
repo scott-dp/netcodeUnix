@@ -5,6 +5,8 @@
 #ifndef EKSAMEN_CLIENT_H
 #define EKSAMEN_CLIENT_H
 
+#include "Game/LocalState.h"
+
 using namespace std;
 
 class Client {
@@ -14,7 +16,8 @@ public:
     void runGameEventLoop();
     void runReceiveThread();
 private:
-    void start();
+    LocalState localState;
+    int start();
     void sendMessageToServer(string message);
     void receiveFromServer();
     int socketFileDescriptor;

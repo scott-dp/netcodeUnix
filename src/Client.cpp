@@ -9,7 +9,7 @@
 
 using namespace std;
 
-void Client::start() {
+int Client::start() {
     cout << "Starting client\n";
     WSADATA wsaData;
     WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -34,11 +34,22 @@ void Client::start() {
             cerr << "IP address conversion error: " << WSAGetLastError() << endl;
         closesocket(socketFileDescriptor);
         WSACleanup();
-        return;
+        throw runtime_error("Invalid IP address");
+    }
+
+    sendMessageToServer("idgen");//requesting a generated id from the server
+    receiveFromServer(); //Generated gamer id should now be in the client buffer
+    string gamerIdString(buffer);
+    try {
+        return stoi(gamerIdString);
+    } catch (const invalid_argument& e) {
+        cerr << "Invalid argument: input is not a valid integer. The input is: " << gamerIdString << "\n";
+    } catch (const out_of_range& e) {
+        cerr << "Out of range: input is too large or too small for an int. The input is: " << gamerIdString << "\n";
     }
 }
 
-Client::Client(int bufferSize, int serverPort, string serverIp) {
+Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) {
     if (bufferSize < 1 || bufferSize > 1024) {
         throw runtime_error("Buffersize cannot be smaller than 1 or greater than 1024");
     }
@@ -49,6 +60,8 @@ Client::Client(int bufferSize, int serverPort, string serverIp) {
     this->serverPort = serverPort;
     this->serverIp = serverIp;
     this->buffer = new char[bufferSize];
+    int gamerId = start();
+    localState.setGamerId(gamerId);
 }
 
 void Client::sendMessageToServer(string message) {
@@ -75,7 +88,6 @@ Client::~Client() {
 }
 
 void Client::runGameEventLoop() {
-    start();
     //TODO poll or listen to keyboard for updates, then send to server and update local state (per tick) and render frame
 
 }
@@ -83,3 +95,4 @@ void Client::runGameEventLoop() {
 void Client::runReceiveThread() {
     //TODO run the receive from server method that blocks.
 }
+
