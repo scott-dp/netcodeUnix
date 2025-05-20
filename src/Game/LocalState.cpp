@@ -19,3 +19,7 @@ LocalState::LocalState(int playerId) {
 void LocalState::setGamerId(int id) {
     this->thisPlayerId = id;
 }
+
+State *LocalState::getState() {
+    return &currentState;
+}

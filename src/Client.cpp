@@ -5,6 +5,7 @@
 #include <iostream>
 #include <ws2tcpip.h>
 #include <thread>
+#include <conio.h>
 
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Client.h"
@@ -83,6 +84,7 @@ void Client::receiveFromServer() {
     if (receivedBytes >= 1023) {
         throw runtime_error("Too many bytes received, buffer overflow");
     }
+
     buffer[receivedBytes]  = '\0';
 
     cout << "Received: " << buffer << endl;
@@ -100,8 +102,64 @@ Client::~Client() {
 }
 
 void Client::runGameEventLoop() {
-    //TODO poll or listen to keyboard for updates, then send to server and update local state (per tick) and render frame
-
+    //TODO poll or listen to keyboard for updates
+    Player *player;
+    while (true) {
+        char ch = _getch();
+        switch (ch) {
+            case 'w':
+            case 'W': {
+                lock_guard<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateYSpeed(-1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock_guard<mutex> unlock(localStateMutex);
+                sendMessageToServer(message);
+                break;
+            }
+            case 'a':
+            case 'A':{
+                lock_guard<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateXSpeed(-1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock_guard<mutex> unlock(localStateMutex);
+                sendMessageToServer(message);
+                break;
+            }
+            case 's':
+            case 'S':{
+                lock_guard<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateYSpeed(1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock_guard<mutex> unlock(localStateMutex);
+                sendMessageToServer(message);
+                break;
+            }
+            case 'd':
+            case 'D':{
+                lock_guard<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateXSpeed(1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock_guard<mutex> unlock(localStateMutex);
+                sendMessageToServer(message);
+                break;
+            }
+            case 'q':
+            case 'Q':
+                std::cout << "Quit\n";
+                return 0;
+            default:
+                continue;
+        }
+    }
+    //TODO show localState to screen
 }
 
 void Client::runReceiveLoop() {

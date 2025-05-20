@@ -7,4 +7,10 @@ void State::addPlayer(Player player) {
     players.push_back(player);
 }
 
+void State::updateState() {
+    for (auto player : players) {
+        player.updatePosition();
+    }
+}
+
 

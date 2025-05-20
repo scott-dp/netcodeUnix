@@ -11,6 +11,7 @@ public:
     explicit LocalState(int playerId);
     void setGamerId(int id);
     Player* getMyPlayer();
+    State* getState();
 private:
     State currentState;
     int thisPlayerId;
