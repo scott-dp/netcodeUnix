@@ -46,9 +46,6 @@ void runServer() {
 }
 
 void runClient() {
-    State localState;
     Client client(bufferSize, serverPort, serverIp);
-    //TODO start these in different threads
-    client.runGameEventLoop();
-    client.runReceiveThread();
+    client.runEventLoop();
 }

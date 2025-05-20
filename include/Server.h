@@ -4,6 +4,7 @@
 #include <winsock2.h>
 #include <vector>
 #include <set>
+#include <mutex>
 #include "sockaddr_in_comparator.h"
 #include "Game/State.h"
 
@@ -18,6 +19,7 @@ public:
     ~Server();
     void runEventLoop();
 private:
+    mutex clientAddressMutex;
     State authoritativeState;
     int nextPLayerId = 1;
     void broadcastToClients(string message, sockaddr_in sender);
@@ -28,7 +30,7 @@ private:
      * This set can be written to by the receive message thread. At the same time
      * it can be read from by the thread that needs to broadcast to all the clients.
      */
-    set<sockaddr_in, sockaddr_in_comparator> clientAddresses; //TODO Needs a mutex
+    set<sockaddr_in, sockaddr_in_comparator> clientAddresses;
     int bufferSize;
     int socketFileDescriptor;
     struct sockaddr_in serverAddress;
@@ -37,7 +39,7 @@ private:
      * The buffer can be written to when the server has received a message form the receive message thread,
      * and can at the same time be read from by the broadcasting thread. Needs to be thread safe.
      */
-    char* buffer; //TODO needs a mutex
+    char* buffer;
     void sendMessageToClient(sockaddr_in clientAddress, string message);
 };
 

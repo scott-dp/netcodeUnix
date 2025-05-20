@@ -4,6 +4,9 @@
 #include <winsock2.h>
 #include <iostream>
 #include <ws2tcpip.h>
+#include <thread>
+#include <conio.h>
+
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Client.h"
 
@@ -38,14 +41,17 @@ int Client::start() {
     }
 
     sendMessageToServer("idgen");//requesting a generated id from the server
-    receiveFromServer(); //Generated gamer id should now be in the client buffer
-    string gamerIdString(buffer);
+    receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx
+    string gamerIdString = buffer;
+    gamerIdString = gamerIdString.substr(3);
     try {
         return stoi(gamerIdString);
     } catch (const invalid_argument& e) {
         cerr << "Invalid argument: input is not a valid integer. The input is: " << gamerIdString << "\n";
+        throw runtime_error("invalid gamer id");
     } catch (const out_of_range& e) {
         cerr << "Out of range: input is too large or too small for an int. The input is: " << gamerIdString << "\n";
+        throw runtime_error("invalid gamer id");
     }
 }
 
@@ -61,7 +67,9 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) 
     this->serverIp = serverIp;
     this->buffer = new char[bufferSize];
     int gamerId = start();
+    cout << "Setting gamer id to " << gamerId <<endl;
     localState.setGamerId(gamerId);
+    cout << "Set the id\n";
 }
 
 void Client::sendMessageToServer(string message) {
@@ -74,12 +82,22 @@ void Client::sendMessageToServer(string message) {
 
 void Client::receiveFromServer() {
     int serverAddressLength = sizeof(serverAddress);
-    int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize, 0, (struct sockaddr*)&serverAddress, &serverAddressLength);
+    int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
+                                 0, (struct sockaddr*)&serverAddress, &serverAddressLength);
 
-    //TODO Check that received bytes doesnt overflow
+    if (receivedBytes >= 1023) {
+        throw runtime_error("Too many bytes received, buffer overflow");
+    }
+
     buffer[receivedBytes]  = '\0';
 
     cout << "Received: " << buffer << endl;
+    if (buffer[0] == 'i' && buffer[1] == 'd' && buffer[2] == ':') {
+        //This is just the generated id and not actually a position update from the server
+        return;
+    }
+    string message = buffer;
+    thread(&Client::checkState, this, message).detach();
 }
 
 Client::~Client() {
@@ -88,11 +106,97 @@ Client::~Client() {
 }
 
 void Client::runGameEventLoop() {
-    //TODO poll or listen to keyboard for updates, then send to server and update local state (per tick) and render frame
-
+    Player *player;
+    while (true) {
+        char ch = _getch();
+        switch (ch) {
+            case 'w':
+            case 'W': {
+                cout << "W\n";
+                unique_lock<mutex> lock(localStateMutex);
+                cout << "locked\n";
+                player = localState.getMyPlayer();
+                cout << "player fetched\n";
+                player->updateYSpeed(-1);
+                cout << "speed updated\n";
+                string message = player->serialize();
+                cout << "player serialized\n";
+                localState.getState()->updateState();
+                cout << "state updated (players moved around with corresponding speed)\n";
+                lock.unlock();
+                cout << "unlocked\n";
+                sendMessageToServer(message);
+                cout << "sending update to server\n";
+                break;
+            }
+            case 'a':
+            case 'A':{
+                cout << "A\n";
+                unique_lock<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateXSpeed(-1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock.unlock();
+                sendMessageToServer(message);
+                break;
+            }
+            case 's':
+            case 'S':{
+                cout << "S\n";
+                unique_lock<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateYSpeed(1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock.unlock();
+                sendMessageToServer(message);
+                break;
+            }
+            case 'd':
+            case 'D':{
+                cout << "D\n";
+                unique_lock<mutex> lock(localStateMutex);
+                player = localState.getMyPlayer();
+                player->updateXSpeed(1);
+                string message = player->serialize();
+                localState.getState()->updateState();
+                lock.unlock();
+                sendMessageToServer(message);
+                break;
+            }
+            case 'q':
+            case 'Q':
+                cout << "Quit\n";
+                return;
+            default:
+                cout<<"nothing\n";
+                continue;
+        }
+        //TODO draw state to screen here
+    }
 }
 
-void Client::runReceiveThread() {
-    //TODO run the receive from server method that blocks.
+void Client::runReceiveLoop() {
+    while (true) {
+        receiveFromServer();
+    }
+}
+
+void Client::runEventLoop() {
+    vector<thread> threads;
+
+    threads.emplace_back(&Client::runGameEventLoop, this);
+    threads.emplace_back(&Client::runReceiveLoop, this);
+
+    for (auto &thread : threads) {
+        thread.join();
+    }
+}
+
+void Client::checkState(string message) {
+    //TODO check the position update and compare it to the localState
+    Player playerUpdate = Player::deserialize(message);
+    lock_guard<mutex> lock(localStateMutex);
 }
 
