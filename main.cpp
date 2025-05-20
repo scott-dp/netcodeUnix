@@ -41,9 +41,13 @@ int main(int argc, char *argv[]) {
 void runServer() {
     Server server(bufferSize, serverPort);
     server.start();
+    server.receiveMessage();
+    server.cleanup();
 }
 
 void runClient() {
     Client client(bufferSize, serverPort, serverIp);
     client.start();
+    client.sendMessageToServer("Hi server");
+    client.cleanup();
 }

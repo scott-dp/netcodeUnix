@@ -31,13 +31,6 @@ void Server::start() {
     }
 
     cout << "Socket bind success\n";
-
-    receiveMessage();
-
-    //Send a message to the client
-    sendMessageToClient(clientAddress, "Hi from server");
-
-    cleanup();
 }
 
 int Server::cleanup() {

@@ -13,13 +13,13 @@ public:
     void start();
     void sendMessageToServer(string message);
     void receiveFromServer();
+    int cleanup();
 private:
     int socketFileDescriptor;
     struct sockaddr_in serverAddress;
     int bufferSize;
     int serverPort;
     string serverIp;
-    int cleanup();
     char* buffer;
 };
 

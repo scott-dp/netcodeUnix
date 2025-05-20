@@ -36,12 +36,6 @@ void Client::start() {
         WSACleanup();
         return;
     }
-
-    sendMessageToServer("Helo");
-
-    receiveFromServer();
-
-    cleanup();
 }
 
 int Client::cleanup() {

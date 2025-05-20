@@ -14,12 +14,12 @@ public:
     void start();
     void receiveMessage();
     void sendMessageToClient(sockaddr_in clientAddress, string message);
+    int cleanup();
 private:
     int bufferSize;
     int socketFileDescriptor;
     struct sockaddr_in serverAddress, clientAddress;
     int serverPort;
-    int cleanup();
     char* buffer;
 };
 
