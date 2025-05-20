@@ -72,9 +72,12 @@ sockaddr_in Server::receiveMessage() {
         throw runtime_error("Failed to receive bytes");
     }
 
+    if (receivedBytes >= 1023) {
+        throw runtime_error("Too many bytes received, buffer overflow");
+    }
+
     addClient(clientAddress);
 
-    //TODO check that no overflow in buffer
 
     buffer[receivedBytes] = '\0';
 
@@ -92,9 +95,11 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     sockaddr_in_comparator socketAddressComparator;
     if (message == "idgen") {
         //The first message a client sends and the client is requesting the server to generate a gamer id
-        sendMessageToClient(sender, to_string(++nextPLayerId));
+        string answer="id:" + to_string(++nextPLayerId);//TODO lock nextPlayerId or smt
+        sendMessageToClient(sender, answer);
         return;
     }
+    //TODO legitimate the message
 
     lock_guard<mutex> lock(clientAddressMutex);
     auto clientAddressesCopy = clientAddresses;
@@ -110,13 +115,11 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 }
 
 void Server::runEventLoop() {
-    vector<thread> threads;
     start();
     while (true) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
-        //TODO make sure the updated state given from a client is legitimate
         string message = buffer;//This should be a copy of the message from a client
-        threads.emplace_back(&Server::broadcastToClients, this, message, sender);
+        thread(&Server::broadcastToClients, this, message, sender).detach();
     }
 }
 

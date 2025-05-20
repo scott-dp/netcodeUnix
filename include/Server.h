@@ -39,7 +39,7 @@ private:
      * The buffer can be written to when the server has received a message form the receive message thread,
      * and can at the same time be read from by the broadcasting thread. Needs to be thread safe.
      */
-    char* buffer; //TODO needs a mutex
+    char* buffer;
     void sendMessageToClient(sockaddr_in clientAddress, string message);
 };
 

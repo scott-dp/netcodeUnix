@@ -4,6 +4,8 @@
 #include <winsock2.h>
 #include <iostream>
 #include <ws2tcpip.h>
+#include <thread>
+
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Client.h"
 
@@ -38,8 +40,9 @@ int Client::start() {
     }
 
     sendMessageToServer("idgen");//requesting a generated id from the server
-    receiveFromServer(); //Generated gamer id should now be in the client buffer
-    string gamerIdString(buffer);
+    receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx
+    string gamerIdString = buffer;
+    gamerIdString = gamerIdString.substr(3);
     try {
         return stoi(gamerIdString);
     } catch (const invalid_argument& e) {
@@ -74,12 +77,21 @@ void Client::sendMessageToServer(string message) {
 
 void Client::receiveFromServer() {
     int serverAddressLength = sizeof(serverAddress);
-    int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize, 0, (struct sockaddr*)&serverAddress, &serverAddressLength);
+    int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
+                                 0, (struct sockaddr*)&serverAddress, &serverAddressLength);
 
-    //TODO Check that received bytes doesnt overflow
+    if (receivedBytes >= 1023) {
+        throw runtime_error("Too many bytes received, buffer overflow");
+    }
     buffer[receivedBytes]  = '\0';
 
     cout << "Received: " << buffer << endl;
+    if (buffer[0] == 'i' && buffer[1] == 'd' && buffer[2] == ':') {
+        //This is just the generated id and not actually a position update from the server
+        return;
+    }
+    string message = buffer;
+    thread(&Client::checkState, this, message).detach();
 }
 
 Client::~Client() {
@@ -92,7 +104,25 @@ void Client::runGameEventLoop() {
 
 }
 
-void Client::runReceiveThread() {
-    //TODO run the receive from server method that blocks.
+void Client::runReceiveLoop() {
+    while (true) {
+        receiveFromServer();
+    }
+}
+
+void Client::runEventLoop() {
+    vector<thread> threads;
+
+    threads.emplace_back(&Client::runGameEventLoop, this);
+    threads.emplace_back(&Client::runReceiveLoop, this);
+
+    for (auto &thread : threads) {
+        thread.join();
+    }
+}
+
+void Client::checkState(string message) {
+    //TODO check the position update and compare it to the localState
+    lock_guard<mutex> lock(localStateMutex);
 }
 
