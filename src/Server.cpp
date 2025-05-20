@@ -32,32 +32,15 @@ void Server::start() {
 
     cout << "Socket bind success\n";
 
-
-    int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
-                 0, ( struct sockaddr *)&clientAddress,
-                 &clientAddressLength); //Client address is set here so that we can send to client aswell.
-    if (receivedBytes == SOCKET_ERROR) {
-        cerr << "recvfrom failed with error: " << WSAGetLastError() << endl;
-        closesocket(socketFileDescriptor);
-        WSACleanup();
-        return;
-    }
-    cout << "Received bytes: " << receivedBytes <<"\n";
-    buffer[receivedBytes] = '\0';
-
-    printf("Client sent : %s\n", buffer);
+    receiveMessage();
 
     //Send a message to the client
-    sendto(socketFileDescriptor, (const char *)"hello", strlen("hello"),
-           0, (const struct sockaddr *) &clientAddress,
-           clientAddressLength);
+    sendMessageToClient(clientAddress, "Hi from server");
 
-    cout<<"Hello message sent from server to client."<<endl;
-
-    cleanup(socketFileDescriptor);
+    cleanup();
 }
 
-int Server::cleanup(int socketFileDescriptor) {
+int Server::cleanup() {
     closesocket(socketFileDescriptor);
     WSACleanup();
     return 0;
@@ -67,10 +50,40 @@ Server::Server(int bufferSize, int serverPort) {
     if (bufferSize < 1 || bufferSize > 1024) {
         throw runtime_error("Buffersize cannot be smaller than 1 or greater than 1024");
     }
-    if (serverPort < 0 || serverPort > 65536) {
+    if (serverPort < 1 || serverPort > 65536) {
         throw runtime_error("Invalid serverport number");
     }
     this->bufferSize = bufferSize;
     this->serverPort = serverPort;
     this->buffer = new char[bufferSize];
+}
+
+void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message) {
+    sendto(socketFileDescriptor, message.c_str(), message.length(),
+           0, (const struct sockaddr *) &clientSocketAddress,
+           sizeof(clientSocketAddress));
+
+    cout<<"Hello message sent from server to client."<<endl;
+}
+
+void Server::receiveMessage() {
+    int clientAddressLength = sizeof(clientAddress);
+
+    int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
+                                 0, ( struct sockaddr *)&clientAddress,
+                                 &clientAddressLength);
+
+    //TODO save client address stuff in thread safe list for broadcasting changes in state
+
+    if (receivedBytes == SOCKET_ERROR) {
+        cerr << "recvfrom failed with error: " << WSAGetLastError() << endl;
+        closesocket(socketFileDescriptor);
+        WSACleanup();
+        return;
+    }
+
+    //TODO check that no overflow in buffer
+    buffer[receivedBytes] = '\0';
+
+    cout << "Received: " << buffer << endl;
 }

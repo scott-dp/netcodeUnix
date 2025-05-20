@@ -65,10 +65,10 @@ Client::Client(int bufferSize, int serverPort, string serverIp) {
 
 void Client::sendMessageToServer(string message) {
     sendto(socketFileDescriptor, message.c_str(),
-           strlen((const char*)&message), 0,
+           message.length(), 0,
            (const struct sockaddr*)&serverAddress, sizeof(serverAddress));
 
-    cout << "Sent: " <<message << "to server\n";
+    cout << "Sent: " <<message << " to server\n";
 }
 
 void Client::receiveFromServer() {
