@@ -35,21 +35,34 @@ int Player::getId() {
 
 void Player::updateXSpeed(int newXSpeed) {
     //D keydown should call this with arg 1, A key should call this with arg -1
+    ySpeed = 0;
     xSpeed = newXSpeed;
 }
 
 void Player::updateYSpeed(int newYSpeed) {
     //S keydown should call this with arg 1, W key should call this with arg -1
+    xSpeed = 0;
     ySpeed = newYSpeed;
 }
 
 string Player::serialize() {
     std::ostringstream oss;
-    oss << id << ' ' << xpos << ' ' << ypos;
+    oss << id << ' ' << xPos << ' ' << yPos << ' ' << xSpeed << ' ' << ySpeed;
     return oss.str();
 }
 
 void Player::updatePosition() {
     xPos += xSpeed;
     yPos += ySpeed;
+}
+
+Player Player::deserialize(const string& serializedPlayer) {
+    Player p;
+    std::istringstream iss(serializedPlayer);
+    iss >> p.id >> p.xPos >> p.yPos >> p.xSpeed >> p.ySpeed;
+    return p;
+}
+
+void Player::setId(int id) {
+    this->id = id;
 }

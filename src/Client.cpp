@@ -48,8 +48,10 @@ int Client::start() {
         return stoi(gamerIdString);
     } catch (const invalid_argument& e) {
         cerr << "Invalid argument: input is not a valid integer. The input is: " << gamerIdString << "\n";
+        throw runtime_error("invalid gamer id");
     } catch (const out_of_range& e) {
         cerr << "Out of range: input is too large or too small for an int. The input is: " << gamerIdString << "\n";
+        throw runtime_error("invalid gamer id");
     }
 }
 
@@ -65,7 +67,9 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) 
     this->serverIp = serverIp;
     this->buffer = new char[bufferSize];
     int gamerId = start();
+    cout << "Setting gamer id to " << gamerId <<endl;
     localState.setGamerId(gamerId);
+    cout << "Set the id\n";
 }
 
 void Client::sendMessageToServer(string message) {
@@ -102,64 +106,75 @@ Client::~Client() {
 }
 
 void Client::runGameEventLoop() {
-    //TODO poll or listen to keyboard for updates
     Player *player;
     while (true) {
         char ch = _getch();
         switch (ch) {
             case 'w':
             case 'W': {
-                lock_guard<mutex> lock(localStateMutex);
+                cout << "W\n";
+                unique_lock<mutex> lock(localStateMutex);
+                cout << "locked\n";
                 player = localState.getMyPlayer();
+                cout << "player fetched\n";
                 player->updateYSpeed(-1);
+                cout << "speed updated\n";
                 string message = player->serialize();
+                cout << "player serialized\n";
                 localState.getState()->updateState();
-                lock_guard<mutex> unlock(localStateMutex);
+                cout << "state updated (players moved around with corresponding speed)\n";
+                lock.unlock();
+                cout << "unlocked\n";
                 sendMessageToServer(message);
+                cout << "sending update to server\n";
                 break;
             }
             case 'a':
             case 'A':{
-                lock_guard<mutex> lock(localStateMutex);
+                cout << "A\n";
+                unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(-1);
                 string message = player->serialize();
                 localState.getState()->updateState();
-                lock_guard<mutex> unlock(localStateMutex);
+                lock.unlock();
                 sendMessageToServer(message);
                 break;
             }
             case 's':
             case 'S':{
-                lock_guard<mutex> lock(localStateMutex);
+                cout << "S\n";
+                unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateYSpeed(1);
                 string message = player->serialize();
                 localState.getState()->updateState();
-                lock_guard<mutex> unlock(localStateMutex);
+                lock.unlock();
                 sendMessageToServer(message);
                 break;
             }
             case 'd':
             case 'D':{
-                lock_guard<mutex> lock(localStateMutex);
+                cout << "D\n";
+                unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(1);
                 string message = player->serialize();
                 localState.getState()->updateState();
-                lock_guard<mutex> unlock(localStateMutex);
+                lock.unlock();
                 sendMessageToServer(message);
                 break;
             }
             case 'q':
             case 'Q':
-                std::cout << "Quit\n";
-                return 0;
+                cout << "Quit\n";
+                return;
             default:
+                cout<<"nothing\n";
                 continue;
         }
+        //TODO draw state to screen here
     }
-    //TODO show localState to screen
 }
 
 void Client::runReceiveLoop() {
@@ -181,6 +196,7 @@ void Client::runEventLoop() {
 
 void Client::checkState(string message) {
     //TODO check the position update and compare it to the localState
+    Player playerUpdate = Player::deserialize(message);
     lock_guard<mutex> lock(localStateMutex);
 }
 

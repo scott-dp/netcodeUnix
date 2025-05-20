@@ -101,9 +101,9 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     }
     //TODO legitimate the message
 
-    lock_guard<mutex> lock(clientAddressMutex);
+    unique_lock<mutex> lock(clientAddressMutex);
     auto clientAddressesCopy = clientAddresses;
-    lock_guard<mutex> unlock(clientAddressMutex);
+    lock.unlock();
 
     for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
