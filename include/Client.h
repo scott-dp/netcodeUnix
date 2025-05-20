@@ -10,11 +10,13 @@ using namespace std;
 class Client {
 public:
     Client(int bufferSize, int serverPort, string serverIp);
+    ~Client();
+    void runGameEventLoop();
+    void runReceiveThread();
+private:
     void start();
     void sendMessageToServer(string message);
     void receiveFromServer();
-    int cleanup();
-private:
     int socketFileDescriptor;
     struct sockaddr_in serverAddress;
     int bufferSize;

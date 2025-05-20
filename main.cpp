@@ -40,15 +40,14 @@ int main(int argc, char *argv[]) {
 }
 
 void runServer() {
-    State authoritativeState();
     Server server(bufferSize, serverPort);
     server.runEventLoop();
 }
 
 void runClient() {
-    State localState();
+    State localState;
     Client client(bufferSize, serverPort, serverIp);
-    client.start();
-    client.sendMessageToServer("Hi server");
-    client.cleanup();
+    //TODO start these in different threads
+    client.runGameEventLoop();
+    client.runReceiveThread();
 }

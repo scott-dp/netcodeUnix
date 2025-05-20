@@ -5,6 +5,7 @@
 #include <iostream>
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
+#include "../include/State.h"
 
 using namespace std;
 
@@ -29,12 +30,6 @@ void Server::start() {
     }
 
     cout << "Socket bind success\n";
-}
-
-int Server::cleanup() {
-    closesocket(socketFileDescriptor);
-    WSACleanup();
-    return 0;
 }
 
 Server::Server(int bufferSize, int serverPort) {
@@ -88,20 +83,23 @@ void Server::addClient(sockaddr_in client) {
 }
 
 void Server::broadcastToClients(string message) {
+    //TODO dont send to sender of update
     for(auto client : clientAddresses) {
         sendMessageToClient(client, message);
     }
 }
 
 void Server::runEventLoop() {
+    State authoritativeState;
     start();
     while (true) {
         receiveMessage(); //Message lies in buffer
         //TODO make sure the updated state given from a client is legitimate
-        broadcastToClients(buffer);
+        broadcastToClients(buffer); //TODO do the brpadcasting in a different thread, start a new thread for processing, serialization and brpadcasting
     }
 }
 
 Server::~Server() {
-    cleanup();
+    closesocket(socketFileDescriptor);
+    WSACleanup();
 }

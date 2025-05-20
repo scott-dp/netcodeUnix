@@ -38,12 +38,6 @@ void Client::start() {
     }
 }
 
-int Client::cleanup() {
-    closesocket(socketFileDescriptor);
-    WSACleanup();
-    return 0;
-}
-
 Client::Client(int bufferSize, int serverPort, string serverIp) {
     if (bufferSize < 1 || bufferSize > 1024) {
         throw runtime_error("Buffersize cannot be smaller than 1 or greater than 1024");
@@ -73,4 +67,19 @@ void Client::receiveFromServer() {
     buffer[receivedBytes]  = '\0';
 
     cout << "Received: " << buffer << endl;
+}
+
+Client::~Client() {
+    closesocket(socketFileDescriptor);
+    WSACleanup();
+}
+
+void Client::runGameEventLoop() {
+    start();
+    //TODO poll or listen to keyboard for updates, then send to server and update local state (per tick) and render frame
+
+}
+
+void Client::runReceiveThread() {
+    //TODO run the receive from server method that blocks.
 }
