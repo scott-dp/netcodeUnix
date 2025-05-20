@@ -1,11 +1,17 @@
 #include <iostream>
 #include <cstdint>
 #include <string>
+#include "include/Server.h"
+#include "include/Client.h"
 
 using namespace std;
 
-const string serverIp = "1234";
-const uint16_t serverPort = 8080;
+const string serverIp = "127.0.0.1";
+const int serverPort = 8080;
+const int bufferSize = 1024;
+
+void runServer();
+void runClient();
 
 int main(int argc, char *argv[]) {
     string programType;
@@ -19,13 +25,25 @@ int main(int argc, char *argv[]) {
     if (programType == "c") {
         //run a client
         cout << "making client" <<endl;
+        runClient();
     } else if (programType == "s") {
         //run server
         cout << "making server" <<endl;
+        runServer();
     } else {
         cerr << "Invalid program type given from command line, expected 's' or 'c', but got " << programType << endl;
         return 1;
     }
 
     return 0;
+}
+
+void runServer() {
+    Server server(bufferSize, serverPort);
+    server.start();
+}
+
+void runClient() {
+    Client client(bufferSize, serverPort, serverIp);
+    client.start();
 }
