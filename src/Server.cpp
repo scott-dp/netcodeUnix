@@ -78,7 +78,6 @@ sockaddr_in Server::receiveMessage() {
 
     cout << "Received: " << buffer << endl;
     return clientAddress;
-
 }
 
 void Server::addClient(sockaddr_in client) {
@@ -88,6 +87,7 @@ void Server::addClient(sockaddr_in client) {
 void Server::broadcastToClients(string message, sockaddr_in sender) {
     sockaddr_in_comparator socketAddressComparator;
     if (message == "idgen") {
+        //The first message a client sends and the client is requesting the server to generate a gamer id
         sendMessageToClient(sender, to_string(++nextPLayerId));
         return;
     }
