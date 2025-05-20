@@ -25,4 +25,8 @@ Player::Player(int id, int xPos, int yPos) : id(id) {
     }
     this->xPos = xPos;
     this->yPos = yPos;
+}
+
+int Player::getId() {
+    return id;
 };

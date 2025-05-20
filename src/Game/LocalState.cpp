@@ -4,7 +4,11 @@
 #include "../../include/Game/LocalState.h"
 
 Player *LocalState::getMyPlayer() {
-    //TODO implement
+    for (auto player : currentState.players) {
+        if (player.getId() == thisPlayerId) {
+            return &player; //TODO understand warning
+        }
+    }
 }
 
 LocalState::LocalState(int playerId) {
