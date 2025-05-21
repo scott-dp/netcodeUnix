@@ -5,6 +5,7 @@
 #include <iostream>
 #include <thread>
 
+
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
 
@@ -102,23 +103,39 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 
         }
         answer += to_string(playerId);
+        answer += "\n";
+        State stateCopy;
+        {
+            auto *player = new Player(playerId, 10, 10);
+            lock_guard<mutex> lock(stateLock);
+            authoritativeState.addPlayer(*player);
+            stateCopy = authoritativeState;
+        }
+        for (auto player : stateCopy.players) {
+            if (player.getId() != playerId) {
+                //All other connected clients
+                answer += player.serialize();
+                answer += "\n";
+            }
+        }
         sendMessageToClient(sender, answer);
         return;
     }
-    //TODO legitimate the message
+    cout << "Updating the player with the given update: " << message << "\n";
     Player playerUpdate = Player::deserialize(message);
-
+    cout << "Deserialized message and got player: " <<
+    playerUpdate.getId() << playerUpdate.getXPos() << playerUpdate.getYPos() <<
+    playerUpdate.getXSpeed() << playerUpdate.getYSpeed() << "\n";
     {
         lock_guard<mutex> lock(stateLock);
         authoritativeState.updatePlayer(playerUpdate);
     }
 
-
-
+    cout << "Updated the auth state\n";
     unique_lock<mutex> lock(clientAddressMutex);
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
-
+    cout << "Copied client adress\n";
     for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
             //Client equals sender, doesn't need to get its own update
@@ -126,6 +143,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
         }
         sendMessageToClient(client, message);
     }
+    cout << "Broadcasted update sucess\n";
 }
 
 void Server::runEventLoop() {
@@ -134,6 +152,7 @@ void Server::runEventLoop() {
     while (true) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         string message = buffer;//This should be a copy of the message from a client
+        cout << "Message copy: " <<message<<"\n";
         thread(&Server::broadcastToClients, this, message, sender).detach();
     }
 }
@@ -142,11 +161,12 @@ void Server::drawLoop() {
     while (true) {
         State stateCopy;
         {
-            std::lock_guard<std::mutex> lock(stateLock);
+            lock_guard<mutex> lock(stateLock);
+            authoritativeState.updateState();
             stateCopy = authoritativeState;//copy of the current state
         }
         stateCopy.drawState();
-        this_thread::sleep_for(chrono::milliseconds(16));
+        this_thread::sleep_for(chrono::milliseconds(100));
     }
 }
 

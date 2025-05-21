@@ -11,26 +11,29 @@ void State::addPlayer(Player player) {
 
 void State::updateState() {
     //TODO do a legal movement check on client side, not server side
-    for (auto player : players) {
+    for (auto &player : players) {
         player.updatePosition();
     }
 }
 
 void State::updatePlayer(Player playerUpdate) {
+    cout << "Updating player " << playerUpdate.getId() << "...\n";
     Player* playerToUpdate = getPlayerWithId(playerUpdate.getId());
-    playerToUpdate->updateXSpeed(playerUpdate.getXSpeed());
-    playerToUpdate->updateYSpeed(playerUpdate.getYSpeed());
+    playerToUpdate->updateSpeed(playerUpdate);
     playerToUpdate->setXPos(playerUpdate.getXPos());
     playerToUpdate->setYPos(playerUpdate.getYPos());
-
+    cout << "player pos updated\n";
 }
 
 Player *State::getPlayerWithId(int id) {
+    cout << "GEttimg player with id "<<id << "\n";
     for (auto &player : players) {
         if (player.getId() == id) {
+            cout << "Found the player\n";
             return &player;
         }
     }
+    cout << "Didnt find the player\n";
     return nullptr;
 }
 

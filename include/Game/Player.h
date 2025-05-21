@@ -29,6 +29,7 @@ public:
     int getId();
     void updateXSpeed(int xSpeed);
     void updateYSpeed(int ySpeed);
+    void updateSpeed(Player updatedPlayer);
     void updatePosition();
     string serialize();
     static Player deserialize(const string& serializedPlayer);

@@ -121,8 +121,6 @@ void Client::runGameEventLoop() {
                 cout << "speed updated\n";
                 string message = player->serialize();
                 cout << "player serialized\n";
-                localState.getState()->updateState();
-                cout << "state updated (players moved around with corresponding speed)\n";
                 lock.unlock();
                 cout << "unlocked\n";
                 sendMessageToServer(message);
@@ -136,7 +134,6 @@ void Client::runGameEventLoop() {
                 player = localState.getMyPlayer();
                 player->updateXSpeed(-1);
                 string message = player->serialize();
-                localState.getState()->updateState();
                 lock.unlock();
                 sendMessageToServer(message);
                 break;
@@ -148,7 +145,6 @@ void Client::runGameEventLoop() {
                 player = localState.getMyPlayer();
                 player->updateYSpeed(1);
                 string message = player->serialize();
-                localState.getState()->updateState();
                 lock.unlock();
                 sendMessageToServer(message);
                 break;
@@ -160,7 +156,6 @@ void Client::runGameEventLoop() {
                 player = localState.getMyPlayer();
                 player->updateXSpeed(1);
                 string message = player->serialize();
-                localState.getState()->updateState();
                 lock.unlock();
                 sendMessageToServer(message);
                 break;
@@ -200,10 +195,11 @@ void Client::runDrawLoop() {
         State* stateCopy;
         {
             lock_guard<mutex> lock(localStateMutex);
+            localState.getState()->updateState();
             stateCopy = localState.getState();//copy of the current state
         }
         stateCopy->drawState();
-        this_thread::sleep_for(chrono::milliseconds(16));
+        this_thread::sleep_for(chrono::milliseconds(100));
     }
 }
 

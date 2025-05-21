@@ -20,6 +20,7 @@ public:
     void updateState();
     void drawState();
 private:
+    vector<int> getPlayers();
 };
 
 
