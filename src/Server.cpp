@@ -4,10 +4,11 @@
 #include <winsock2.h>
 #include <iostream>
 #include <thread>
+#include <sstream>
+
 
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
-#include "../include/Game/State.h"
 
 using namespace std;
 
@@ -88,23 +89,55 @@ sockaddr_in Server::receiveMessage() {
 void Server::addClient(sockaddr_in client) {
     lock_guard<mutex> lock(clientAddressMutex);
     clientAddresses.insert(client);
-    //unlocks mutex here bcuz out of scope
 }
 
 void Server::broadcastToClients(string message, sockaddr_in sender) {
     sockaddr_in_comparator socketAddressComparator;
     if (message == "idgen") {
         //The first message a client sends and the client is requesting the server to generate a gamer id
-        string answer="id:" + to_string(++nextPLayerId);//TODO lock nextPlayerId or smt
+        string answer="id:";
+        int playerId;
+        {
+            //In case to clients request an id at the same time
+            lock_guard<mutex> lock(playerIdLock);
+            playerId = ++nextPLayerId;
+
+        }
+        answer += to_string(playerId);
+        State stateCopy;
+        Player *newPlayer;
+        {
+            newPlayer = new Player(playerId, 10, 10);
+            lock_guard<mutex> lock(stateLock);
+            authoritativeState.addPlayer(*newPlayer);
+            stateCopy = authoritativeState;
+        }
+        for (auto player : stateCopy.players) {
+            if (player.getId() != playerId) {
+                //All other connected clients
+                answer += "\n";
+                answer += player.serialize();
+            }
+        }
         sendMessageToClient(sender, answer);
+        broadcastToClients(newPlayer->serialize(), sender); //Let all other clients know that a new client is connected
         return;
     }
-    //TODO legitimate the message
+    cout << "Updating the player with the given update: " << message << "\n";
+    Player playerUpdate = Player::deserialize(message);
+    cout << "Deserialized message and got player: " <<
+    playerUpdate.getId() << playerUpdate.getXPos() << playerUpdate.getYPos() <<
+    playerUpdate.getXSpeed() << playerUpdate.getYSpeed() << "\n";
+    {
+        lock_guard<mutex> lock(stateLock);
+        authoritativeState.updatePlayer(playerUpdate);
+    }
 
+    cout << "Updated the auth state\n";
     unique_lock<mutex> lock(clientAddressMutex);
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
-
+    cout << "Copied client adress\n";
     for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
             //Client equals sender, doesn't need to get its own update
@@ -112,14 +145,30 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
         }
         sendMessageToClient(client, message);
     }
+    cout << "Broadcasted update sucess\n";
 }
 
 void Server::runEventLoop() {
     start();
+    thread(&Server::drawLoop, this).detach();
     while (true) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         string message = buffer;//This should be a copy of the message from a client
+        cout << "Message copy: " <<message<<"\n";
         thread(&Server::broadcastToClients, this, message, sender).detach();
+    }
+}
+
+void Server::drawLoop() {
+    while (true) {
+        State stateCopy;
+        {
+            lock_guard<mutex> lock(stateLock);
+            authoritativeState.updateState();
+            stateCopy = authoritativeState;//copy of the current state
+        }
+        stateCopy.drawState();
+        this_thread::sleep_for(chrono::milliseconds(100));
     }
 }
 

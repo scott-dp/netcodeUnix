@@ -6,6 +6,7 @@
 
 #include <stdexcept>
 #include <sstream>
+#include <iostream>
 
 using namespace std;
 
@@ -54,15 +55,52 @@ string Player::serialize() {
 void Player::updatePosition() {
     xPos += xSpeed;
     yPos += ySpeed;
+    cout << "xpos "<< xPos << "\n";
+    cout << "ypos "<< yPos << "\n";
+    cout << "x speed "<< xSpeed << "\n";
+    cout << "y speed "<< ySpeed << "\n";
 }
 
 Player Player::deserialize(const string& serializedPlayer) {
+    cout << "Deserializing player: " << serializedPlayer << "\n";
     Player p;
     std::istringstream iss(serializedPlayer);
     iss >> p.id >> p.xPos >> p.yPos >> p.xSpeed >> p.ySpeed;
+    cout << "Deserialize success\n";
     return p;
 }
 
 void Player::setId(int id) {
     this->id = id;
+}
+
+int Player::getXSpeed() {
+    return xSpeed;
+}
+
+int Player::getYSpeed() {
+    return ySpeed;
+}
+
+int Player::getXPos() {
+    return xPos;
+}
+
+int Player::getYPos() {
+    return yPos;
+}
+
+void Player::setXPos(int newXPos) {
+    //TODO add validation
+    this->xPos = newXPos;
+}
+
+void Player::setYPos(int newYPos) {
+    //TODO add validation
+    this->yPos = newYPos;
+}
+
+void Player::updateSpeed(Player updatedPlayer) {
+    xSpeed = updatedPlayer.getXSpeed();
+    ySpeed = updatedPlayer.getYSpeed();
 }

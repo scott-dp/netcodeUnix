@@ -16,6 +16,8 @@ public:
     ~Client();
     void runEventLoop();
 private:
+    static vector<string> splitOnNewLine(const string& input);//TODO extract to util class
+    void runDrawLoop();
     void runGameEventLoop();
     void runReceiveLoop();
     void checkState(string message);

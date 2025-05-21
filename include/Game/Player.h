@@ -18,11 +18,18 @@ private:
     int ySpeed;
 public:
     void setId(int id);
+    int getXSpeed();
+    int getYSpeed();
+    int getXPos();
+    int getYPos();
+    void setXPos(int newXPos);
+    void setYPos(int newYPos);
     Player() = default;
     Player(int id, int xPos, int yPos);
     int getId();
     void updateXSpeed(int xSpeed);
     void updateYSpeed(int ySpeed);
+    void updateSpeed(Player updatedPlayer);
     void updatePosition();
     string serialize();
     static Player deserialize(const string& serializedPlayer);
