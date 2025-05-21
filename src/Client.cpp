@@ -213,7 +213,7 @@ void Client::runDrawLoop() {
             stateCopy = localState.getState();//copy of the current state
         }
         stateCopy->drawState();
-        this_thread::sleep_for(chrono::milliseconds(100));
+        this_thread::sleep_for(chrono::milliseconds(1000)); //1fps
     }
 }
 
