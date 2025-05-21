@@ -193,6 +193,8 @@ void Client::runEventLoop() {
     for (auto &thread : threads) {
         thread.join();
     }
+
+    //TODO make server remove this client
 }
 
 void Client::runDrawLoop() {
@@ -204,7 +206,7 @@ void Client::runDrawLoop() {
             stateCopy = localState.getState();//copy of the current state
         }
         stateCopy->drawState();
-        this_thread::sleep_for(chrono::milliseconds(1000)); //1fps
+        this_thread::sleep_for(chrono::milliseconds(500)); //1fps
     }
 }
 

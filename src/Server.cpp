@@ -142,6 +142,8 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
     cout << "Copied client address to the set\n";
+    this_thread::sleep_for(chrono::milliseconds(5000));
+
     for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
             //Client equals sender, doesn't need to get its own update
@@ -173,7 +175,7 @@ void Server::drawLoop() {
             stateCopy = authoritativeState;//copy of the current state
         }
         stateCopy.drawState();
-        this_thread::sleep_for(chrono::milliseconds(1000));
+        this_thread::sleep_for(chrono::milliseconds(500));
     }
 }
 

@@ -37,7 +37,6 @@ Player *State::getPlayerWithId(int id) {
 }
 
 void State::drawState() {
-    /**
     const int width = 100;
     const int height = 100;
 
@@ -72,10 +71,10 @@ void State::drawState() {
     std::cout << " ";
     for (int i = 0; i < width; ++i) std::cout << "_";
     std::cout << "\n";
-    */
+    /**
     for (Player player : players) {
         cout << "Player " << player.getId() << " is at pos " << player.getXPos() << ", " << player.getYPos() <<
         " with x speed " << player.getXSpeed() << " and y speed "<<player.getYSpeed() <<"\n";
-    }
+    }*/
 }
 
