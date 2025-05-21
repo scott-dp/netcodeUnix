@@ -70,13 +70,14 @@ int Client::parseIdGenerationMessage() {
     }
 }
 
-Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) {
+Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0), workers(4) {
     if (bufferSize < 1 || bufferSize > 1024) {
         throw runtime_error("Buffersize cannot be smaller than 1 or greater than 1024");
     }
     if (serverPort < 0 || serverPort > 65536) {
         throw runtime_error("Invalid serverport number");
     }
+    workers.start();
     this->bufferSize = bufferSize;
     this->serverPort = serverPort;
     this->serverIp = serverIp;
@@ -115,7 +116,9 @@ void Client::receiveFromServer() {
         return;
     }
     string message = buffer;
-    thread(&Client::checkState, this, message).detach();//TODO thread pool
+    workers.post([this, message]() {
+        this->checkState(message);
+    });
 }
 
 Client::~Client() {
@@ -125,7 +128,7 @@ Client::~Client() {
 
 void Client::runGameEventLoop() {
     Player *player;
-    while (true) {
+    while (runClient) {
         char ch = _getch();
         switch (ch) {
             case 'w':
@@ -197,7 +200,9 @@ void Client::runEventLoop() {
         thread.join();
     }
 
-    //TODO make server remove this client
+    workers.join();
+
+    //TODO make server remove this client after this client stops the game
 }
 
 void Client::runDrawLoop() {

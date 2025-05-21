@@ -87,12 +87,10 @@ int Player::getYPos() {
 }
 
 void Player::setXPos(int newXPos) {
-    //TODO add validation
     this->xPos = newXPos;
 }
 
 void Player::setYPos(int newYPos) {
-    //TODO add validation
     this->yPos = newYPos;
 }
 

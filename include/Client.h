@@ -8,6 +8,7 @@
 #include <mutex>
 #include <atomic>
 #include "Game/LocalState.h"
+#include "worker_threads/Workers.h"
 
 using namespace std;
 
@@ -17,6 +18,7 @@ public:
     ~Client();
     void runEventLoop();
 private:
+    Workers workers;
     atomic<boolean> runClient = true;
     int parseIdGenerationMessage();
     static vector<string> splitOnNewLine(const string& input);//TODO extract to util class

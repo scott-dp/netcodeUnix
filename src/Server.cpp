@@ -174,6 +174,8 @@ void Server::runEventLoop() {
     for(auto &thread : threads) {
         thread.join();
     }
+
+    workers.join();
 }
 
 void Server::listenForQuitCommand() {
