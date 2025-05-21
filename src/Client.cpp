@@ -127,24 +127,16 @@ void Client::runGameEventLoop() {
         switch (ch) {
             case 'w':
             case 'W': {
-                cout << "W\n";
                 unique_lock<mutex> lock(localStateMutex);
-                cout << "locked\n";
                 player = localState.getMyPlayer();
-                cout << "player fetched\n";
                 player->updateYSpeed(-1);
-                cout << "speed updated\n";
                 string message = player->serialize();
-                cout << "player serialized\n";
                 lock.unlock();
-                cout << "unlocked\n";
                 sendMessageToServer(message);
-                cout << "sending update to server\n";
                 break;
             }
             case 'a':
             case 'A':{
-                cout << "A\n";
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(-1);
@@ -155,7 +147,6 @@ void Client::runGameEventLoop() {
             }
             case 's':
             case 'S':{
-                cout << "S\n";
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateYSpeed(1);
@@ -166,7 +157,6 @@ void Client::runGameEventLoop() {
             }
             case 'd':
             case 'D':{
-                cout << "D\n";
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(1);
@@ -178,6 +168,7 @@ void Client::runGameEventLoop() {
             case 'q':
             case 'Q':
                 cout << "Quit\n";
+                runClient = false;
                 return;
             default:
                 cout<<"nothing\n";
@@ -187,7 +178,7 @@ void Client::runGameEventLoop() {
 }
 
 void Client::runReceiveLoop() {
-    while (true) {
+    while (runClient) {
         receiveFromServer();
     }
 }
@@ -205,7 +196,7 @@ void Client::runEventLoop() {
 }
 
 void Client::runDrawLoop() {
-    while (true) {
+    while (runClient) {
         State* stateCopy;
         {
             lock_guard<mutex> lock(localStateMutex);
@@ -234,7 +225,8 @@ void Client::checkState(string message) {
         }
         return;
     }
-    if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()) {
+    if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()
+    || predictedPlayer->getYSpeed() != playerUpdate.getYSpeed() || predictedPlayer->getXSpeed() != playerUpdate.getXSpeed()) {
         //wrong prediciton, need to rollback
         cout << "Rolling back\n";
         {

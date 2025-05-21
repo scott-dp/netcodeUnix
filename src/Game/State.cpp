@@ -74,7 +74,8 @@ void State::drawState() {
     std::cout << "\n";
     */
     for (Player player : players) {
-        cout << "Player " << player.getId() << " is at pos " << player.getXPos() << ", " << player.getYPos() << "\n";
+        cout << "Player " << player.getId() << " is at pos " << player.getXPos() << ", " << player.getYPos() <<
+        " with x speed " << player.getXSpeed() << " and y speed "<<player.getYSpeed() <<"\n";
     }
 }
 

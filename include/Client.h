@@ -6,6 +6,7 @@
 #define EKSAMEN_CLIENT_H
 
 #include <mutex>
+#include <atomic>
 #include "Game/LocalState.h"
 
 using namespace std;
@@ -16,6 +17,7 @@ public:
     ~Client();
     void runEventLoop();
 private:
+    atomic<boolean> runClient = true;
     int parseIdGenerationMessage();
     static vector<string> splitOnNewLine(const string& input);//TODO extract to util class
     void runDrawLoop();

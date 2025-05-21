@@ -125,6 +125,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     if (message == "idgen") {
         //The first message a client sends and the client is requesting the server to generate a gamer id
         idGenerationResponse(sender);
+        return;
     }
     cout << "Updating the player with the given update: " << message << "\n";
     Player playerUpdate = Player::deserialize(message);
@@ -172,7 +173,7 @@ void Server::drawLoop() {
             stateCopy = authoritativeState;//copy of the current state
         }
         stateCopy.drawState();
-        this_thread::sleep_for(chrono::milliseconds(100));
+        this_thread::sleep_for(chrono::milliseconds(1000));
     }
 }
 
