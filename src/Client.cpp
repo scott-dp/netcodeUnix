@@ -43,16 +43,22 @@ int Client::start() {
 
     sendMessageToServer("idgen");//requesting a generated id from the server
     receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx, as well as other clients serialized
-    vector<string> lines = splitOnNewLine(buffer);
-    string gamerId = lines[0].substr(3);
-    for (int i = 1; i < lines.size(); ++i) {
+    return parseIdGenerationMessage();
+}
+
+int Client::parseIdGenerationMessage() {
+    vector<string> lines = splitOnNewLine(buffer);//Values are seperated by newlines
+
+    string gamerId = lines[0].substr(3);//generated id shall be on the first line
+
+    for (int i = 1; i < lines.size(); ++i) { //possible existing clients on the next lines
         Player player = Player::deserialize(lines[i]);
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->addPlayer(player);
         }
-
     }
+
     try {
         return stoi(gamerId);
     } catch (const invalid_argument& e) {
@@ -77,7 +83,7 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) 
     this->buffer = new char[bufferSize];
     int gamerId = start();
     cout << "Setting gamer id to " << gamerId <<endl;
-    localState.setGamerId(gamerId);
+    localState.setGamerId(gamerId);//TODO should lock
     cout << "Set the id\n";
 }
 
@@ -121,24 +127,16 @@ void Client::runGameEventLoop() {
         switch (ch) {
             case 'w':
             case 'W': {
-                cout << "W\n";
                 unique_lock<mutex> lock(localStateMutex);
-                cout << "locked\n";
                 player = localState.getMyPlayer();
-                cout << "player fetched\n";
                 player->updateYSpeed(-1);
-                cout << "speed updated\n";
                 string message = player->serialize();
-                cout << "player serialized\n";
                 lock.unlock();
-                cout << "unlocked\n";
                 sendMessageToServer(message);
-                cout << "sending update to server\n";
                 break;
             }
             case 'a':
             case 'A':{
-                cout << "A\n";
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(-1);
@@ -149,7 +147,6 @@ void Client::runGameEventLoop() {
             }
             case 's':
             case 'S':{
-                cout << "S\n";
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateYSpeed(1);
@@ -160,7 +157,6 @@ void Client::runGameEventLoop() {
             }
             case 'd':
             case 'D':{
-                cout << "D\n";
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(1);
@@ -172,17 +168,17 @@ void Client::runGameEventLoop() {
             case 'q':
             case 'Q':
                 cout << "Quit\n";
+                runClient = false;
                 return;
             default:
                 cout<<"nothing\n";
                 continue;
         }
-        //TODO draw state to screen here
     }
 }
 
 void Client::runReceiveLoop() {
-    while (true) {
+    while (runClient) {
         receiveFromServer();
     }
 }
@@ -197,10 +193,12 @@ void Client::runEventLoop() {
     for (auto &thread : threads) {
         thread.join();
     }
+
+    //TODO make server remove this client
 }
 
 void Client::runDrawLoop() {
-    while (true) {
+    while (runClient) {
         State* stateCopy;
         {
             lock_guard<mutex> lock(localStateMutex);
@@ -208,7 +206,7 @@ void Client::runDrawLoop() {
             stateCopy = localState.getState();//copy of the current state
         }
         stateCopy->drawState();
-        this_thread::sleep_for(chrono::milliseconds(100));
+        this_thread::sleep_for(chrono::milliseconds(500)); //1fps
     }
 }
 
@@ -229,7 +227,8 @@ void Client::checkState(string message) {
         }
         return;
     }
-    if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()) {
+    if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()
+    || predictedPlayer->getYSpeed() != playerUpdate.getYSpeed() || predictedPlayer->getXSpeed() != playerUpdate.getXSpeed()) {
         //wrong prediciton, need to rollback
         cout << "Rolling back\n";
         {

@@ -79,7 +79,6 @@ sockaddr_in Server::receiveMessage() {
 
     addClient(clientAddress);
 
-
     buffer[receivedBytes] = '\0';
 
     cout << "Received: " << buffer << endl;
@@ -91,36 +90,41 @@ void Server::addClient(sockaddr_in client) {
     clientAddresses.insert(client);
 }
 
+void Server::idGenerationResponse(sockaddr_in sender) {
+    string answer="id:";
+    int playerId;
+    {
+        //In case clients request an id at the same time
+        lock_guard<mutex> lock(playerIdLock);
+        playerId = ++nextPLayerId;
+
+    }
+    answer += to_string(playerId);
+    State stateCopy;
+    Player *newPlayer;
+    {
+        newPlayer = new Player(playerId, 10, 10); //The new client that requested id generation
+        lock_guard<mutex> lock(stateLock);
+        authoritativeState.addPlayer(*newPlayer);
+        stateCopy = authoritativeState;
+    }
+    for (auto player : stateCopy.players) {
+        if (player.getId() != playerId) {
+            //All other connected clients
+            answer += "\n";
+            answer += player.serialize();
+        }
+    }
+    sendMessageToClient(sender, answer);
+    broadcastToClients(newPlayer->serialize(), sender); //Let all other clients know that a new client is connected
+    return;
+}
+
 void Server::broadcastToClients(string message, sockaddr_in sender) {
     sockaddr_in_comparator socketAddressComparator;
     if (message == "idgen") {
         //The first message a client sends and the client is requesting the server to generate a gamer id
-        string answer="id:";
-        int playerId;
-        {
-            //In case to clients request an id at the same time
-            lock_guard<mutex> lock(playerIdLock);
-            playerId = ++nextPLayerId;
-
-        }
-        answer += to_string(playerId);
-        State stateCopy;
-        Player *newPlayer;
-        {
-            newPlayer = new Player(playerId, 10, 10);
-            lock_guard<mutex> lock(stateLock);
-            authoritativeState.addPlayer(*newPlayer);
-            stateCopy = authoritativeState;
-        }
-        for (auto player : stateCopy.players) {
-            if (player.getId() != playerId) {
-                //All other connected clients
-                answer += "\n";
-                answer += player.serialize();
-            }
-        }
-        sendMessageToClient(sender, answer);
-        broadcastToClients(newPlayer->serialize(), sender); //Let all other clients know that a new client is connected
+        idGenerationResponse(sender);
         return;
     }
     cout << "Updating the player with the given update: " << message << "\n";
@@ -137,7 +141,9 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     unique_lock<mutex> lock(clientAddressMutex);
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
-    cout << "Copied client adress\n";
+    cout << "Copied client address to the set\n";
+    this_thread::sleep_for(chrono::milliseconds(5000));
+
     for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
             //Client equals sender, doesn't need to get its own update
@@ -151,6 +157,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 void Server::runEventLoop() {
     start();
     thread(&Server::drawLoop, this).detach();
+
     while (true) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         string message = buffer;//This should be a copy of the message from a client
@@ -168,7 +175,7 @@ void Server::drawLoop() {
             stateCopy = authoritativeState;//copy of the current state
         }
         stateCopy.drawState();
-        this_thread::sleep_for(chrono::milliseconds(100));
+        this_thread::sleep_for(chrono::milliseconds(500));
     }
 }
 

@@ -19,6 +19,7 @@ public:
     ~Server();
     void runEventLoop();
 private:
+    void idGenerationResponse(sockaddr_in sender);
     void drawLoop();
     mutex clientAddressMutex;
     mutex playerIdLock;

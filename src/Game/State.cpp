@@ -5,6 +5,7 @@
 #include "../../include/Game/State.h"
 
 using namespace std;
+
 void State::addPlayer(Player player) {
     players.push_back(player);
 }
@@ -17,12 +18,10 @@ void State::updateState() {
 }
 
 void State::updatePlayer(Player playerUpdate) {
-    cout << "Updating player " << playerUpdate.getId() << "...\n";
     Player* playerToUpdate = getPlayerWithId(playerUpdate.getId());
     playerToUpdate->updateSpeed(playerUpdate);
     playerToUpdate->setXPos(playerUpdate.getXPos());
     playerToUpdate->setYPos(playerUpdate.getYPos());
-    cout << "player pos updated\n";
 }
 
 Player *State::getPlayerWithId(int id) {
@@ -72,5 +71,10 @@ void State::drawState() {
     std::cout << " ";
     for (int i = 0; i < width; ++i) std::cout << "_";
     std::cout << "\n";
+    /**
+    for (Player player : players) {
+        cout << "Player " << player.getId() << " is at pos " << player.getXPos() << ", " << player.getYPos() <<
+        " with x speed " << player.getXSpeed() << " and y speed "<<player.getYSpeed() <<"\n";
+    }*/
 }
 

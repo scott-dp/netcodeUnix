@@ -55,10 +55,6 @@ string Player::serialize() {
 void Player::updatePosition() {
     xPos += xSpeed;
     yPos += ySpeed;
-    cout << "xpos "<< xPos << "\n";
-    cout << "ypos "<< yPos << "\n";
-    cout << "x speed "<< xSpeed << "\n";
-    cout << "y speed "<< ySpeed << "\n";
 }
 
 Player Player::deserialize(const string& serializedPlayer) {

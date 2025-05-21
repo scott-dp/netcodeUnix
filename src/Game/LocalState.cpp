@@ -9,10 +9,12 @@ Player *LocalState::getMyPlayer() {
     for (auto &player : currentState.players) {
         cout << player.getId()<<endl;
         if (player.getId() == thisPlayerId) {
-            cout << "Found the plauer\n";
+            cout << "Found the player\n";
             return &player;
         }
     }
+    cout << "Didint find the player locally with id " << thisPlayerId;
+    return nullptr;
 }
 
 LocalState::LocalState(int playerId) {
