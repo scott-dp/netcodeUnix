@@ -50,7 +50,7 @@ void State::drawState() {
         int x = player.getXPos();
         int y = player.getYPos();
         if (x >= 0 && x < width && y >= 0 && y < height) {
-            buffer[y][x] = '@'; // or 'P', etc.
+            buffer[y][x] = '@';
         }
     }
 
