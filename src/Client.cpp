@@ -83,7 +83,10 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) 
     this->buffer = new char[bufferSize];
     int gamerId = start();
     cout << "Setting gamer id to " << gamerId <<endl;
-    localState.setGamerId(gamerId);//TODO should lock
+    {
+        lock_guard<mutex> lock(localStateMutex);
+        localState.setGamerId(gamerId);
+    }
     cout << "Set the id\n";
 }
 
@@ -112,7 +115,7 @@ void Client::receiveFromServer() {
         return;
     }
     string message = buffer;
-    thread(&Client::checkState, this, message).detach();
+    thread(&Client::checkState, this, message).detach();//TODO thread pool
 }
 
 Client::~Client() {
