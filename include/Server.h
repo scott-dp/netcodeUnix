@@ -5,8 +5,10 @@
 #include <vector>
 #include <set>
 #include <mutex>
+#include <atomic>
 #include "sockaddr_in_comparator.h"
 #include "Game/State.h"
+#include "worker_threads/Workers.h"
 
 #ifndef EKSAMEN_SERVER_H
 #define EKSAMEN_SERVER_H
@@ -19,6 +21,8 @@ public:
     ~Server();
     void runEventLoop();
 private:
+    Workers workers;
+    void listenForQuitCommand();
     void idGenerationResponse(sockaddr_in sender);
     void drawLoop();
     mutex clientAddressMutex;
@@ -36,6 +40,7 @@ private:
      */
     set<sockaddr_in, sockaddr_in_comparator> clientAddresses;
     int bufferSize;
+    atomic<boolean> runServer = true;
     int socketFileDescriptor;
     struct sockaddr_in serverAddress;
     int serverPort;

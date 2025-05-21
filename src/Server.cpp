@@ -5,6 +5,7 @@
 #include <iostream>
 #include <thread>
 #include <sstream>
+#include <conio.h>
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -35,13 +36,14 @@ void Server::start() {
     cout << "Socket bind success\n";
 }
 
-Server::Server(int bufferSize, int serverPort) {
+Server::Server(int bufferSize, int serverPort) : workers(4) {
     if (bufferSize < 1 || bufferSize > 1024) {
         throw runtime_error("Buffersize cannot be smaller than 1 or greater than 1024");
     }
     if (serverPort < 1 || serverPort > 65536) {
         throw runtime_error("Invalid serverport number");
     }
+    workers.start();
     this->bufferSize = bufferSize;
     this->serverPort = serverPort;
     this->buffer = new char[bufferSize];
@@ -142,7 +144,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
     cout << "Copied client address to the set\n";
-    this_thread::sleep_for(chrono::milliseconds(5000));
+    this_thread::sleep_for(chrono::milliseconds(5000)); //to introduce lag to so show the rollback feature
 
     for(auto client : clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
@@ -156,18 +158,42 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 
 void Server::runEventLoop() {
     start();
-    thread(&Server::drawLoop, this).detach();
+    vector<thread> threads;
+    threads.emplace_back(&Server::drawLoop, this);
+    threads.emplace_back(&Server::listenForQuitCommand, this);
 
-    while (true) {
+    while (runServer) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         string message = buffer;//This should be a copy of the message from a client
         cout << "Message copy: " <<message<<"\n";
-        thread(&Server::broadcastToClients, this, message, sender).detach();
+        workers.post([this, message, sender]() {
+            this->broadcastToClients(message, sender);
+        });
+    }
+
+
+    for(auto &thread : threads) {
+        thread.join();
+    }
+
+    workers.join();
+}
+
+void Server::listenForQuitCommand() {
+    while (runServer) {
+        char ch = _getch();
+        switch (ch) {
+            case 'q':
+            case 'Q':
+                runServer = false;
+                return;
+        }
+
     }
 }
 
 void Server::drawLoop() {
-    while (true) {
+    while (runServer) {
         State stateCopy;
         {
             lock_guard<mutex> lock(stateLock);
