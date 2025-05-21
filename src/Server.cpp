@@ -7,7 +7,6 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Server.h"
-#include "../include/Game/State.h"
 
 using namespace std;
 

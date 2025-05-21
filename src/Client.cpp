@@ -199,7 +199,7 @@ void Client::runDrawLoop() {
     while (true) {
         State* stateCopy;
         {
-            std::lock_guard<std::mutex> lock(localStateMutex);
+            lock_guard<mutex> lock(localStateMutex);
             stateCopy = localState.getState();//copy of the current state
         }
         stateCopy->drawState();
@@ -218,6 +218,7 @@ void Client::checkState(string message) {
     Player* predictedPlayer = stateCopy->getPlayerWithId(playerUpdate.getId());
     if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()) {
         //TODO: wrong prediciton, need to rollback
+        cout << "Rolling back\n";
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->updatePlayer(playerUpdate); //The rollback
