@@ -203,8 +203,6 @@ void Server::drawLoop() {
         stateCopy.drawState();
         this_thread::sleep_for(chrono::milliseconds(500));
     }
-    cout <<"Event loop finished..\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@";
-
 }
 
 Server::~Server() {
