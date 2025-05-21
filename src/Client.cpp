@@ -6,6 +6,7 @@
 #include <ws2tcpip.h>
 #include <thread>
 #include <conio.h>
+#include <sstream>
 
 #pragma comment(lib, "ws2_32.lib")
 #include "../include/Client.h"
@@ -41,16 +42,24 @@ int Client::start() {
     }
 
     sendMessageToServer("idgen");//requesting a generated id from the server
-    receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx
-    string gamerIdString = buffer;
-    gamerIdString = gamerIdString.substr(3);
+    receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx, as well as other clients serialized
+    vector<string> lines = splitOnNewLine(buffer);
+    string gamerId = lines[0].substr(3);
+    for (int i = 1; i < lines.size(); ++i) {
+        Player player = Player::deserialize(lines[i]);
+        {
+            lock_guard<mutex> lock(localStateMutex);
+            localState.getState()->addPlayer(player);
+        }
+
+    }
     try {
-        return stoi(gamerIdString);
+        return stoi(gamerId);
     } catch (const invalid_argument& e) {
-        cerr << "Invalid argument: input is not a valid integer. The input is: " << gamerIdString << "\n";
+        cerr << "Invalid argument: input is not a valid integer. The input is: " << gamerId << "\n";
         throw runtime_error("invalid gamer id");
     } catch (const out_of_range& e) {
-        cerr << "Out of range: input is too large or too small for an int. The input is: " << gamerIdString << "\n";
+        cerr << "Out of range: input is too large or too small for an int. The input is: " << gamerId << "\n";
         throw runtime_error("invalid gamer id");
     }
 }
@@ -204,21 +213,41 @@ void Client::runDrawLoop() {
 }
 
 void Client::checkState(string message) {
-    //TODO check the position update and compare it to the localState
     Player playerUpdate = Player::deserialize(message);
     State* stateCopy;
     {
         std::lock_guard<std::mutex> lock(localStateMutex);
         stateCopy = localState.getState();//copy of the current state
     }
+
     Player* predictedPlayer = stateCopy->getPlayerWithId(playerUpdate.getId());
+    //Check if the update is a new player, then add the player
+    if (predictedPlayer == nullptr) {
+        {
+            lock_guard<mutex> lock(localStateMutex);
+            localState.getState()->addPlayer(playerUpdate);
+        }
+        return;
+    }
     if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()) {
-        //TODO: wrong prediciton, need to rollback
+        //wrong prediciton, need to rollback
         cout << "Rolling back\n";
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->updatePlayer(playerUpdate); //The rollback
         }
     }
+}
+
+vector<string> Client::splitOnNewLine(const string &input) {
+    vector<string> lines;
+    istringstream stream(input);
+    string line;
+
+    while (getline(stream, line)) {
+        lines.push_back(line);
+    }
+
+    return lines;
 }
 

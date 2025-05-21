@@ -4,6 +4,7 @@
 #include <winsock2.h>
 #include <iostream>
 #include <thread>
+#include <sstream>
 
 
 #pragma comment(lib, "ws2_32.lib")
@@ -103,22 +104,23 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 
         }
         answer += to_string(playerId);
-        answer += "\n";
         State stateCopy;
+        Player *newPlayer;
         {
-            auto *player = new Player(playerId, 10, 10);
+            newPlayer = new Player(playerId, 10, 10);
             lock_guard<mutex> lock(stateLock);
-            authoritativeState.addPlayer(*player);
+            authoritativeState.addPlayer(*newPlayer);
             stateCopy = authoritativeState;
         }
         for (auto player : stateCopy.players) {
             if (player.getId() != playerId) {
                 //All other connected clients
-                answer += player.serialize();
                 answer += "\n";
+                answer += player.serialize();
             }
         }
         sendMessageToClient(sender, answer);
+        broadcastToClients(newPlayer->serialize(), sender); //Let all other clients know that a new client is connected
         return;
     }
     cout << "Updating the player with the given update: " << message << "\n";
