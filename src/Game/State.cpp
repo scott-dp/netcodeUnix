@@ -67,7 +67,7 @@ void State::drawState() {
 
     //bottom line
     std::cout << " ";
-    for (int i = 0; i < width; ++i) std::cout << "‾";
+    for (int i = 0; i < width; ++i) std::cout << "_";
     std::cout << "\n";
 }
 
