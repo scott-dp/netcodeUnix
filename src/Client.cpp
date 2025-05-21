@@ -43,16 +43,22 @@ int Client::start() {
 
     sendMessageToServer("idgen");//requesting a generated id from the server
     receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx, as well as other clients serialized
-    vector<string> lines = splitOnNewLine(buffer);
-    string gamerId = lines[0].substr(3);
-    for (int i = 1; i < lines.size(); ++i) {
+    return parseIdGenerationMessage();
+}
+
+int Client::parseIdGenerationMessage() {
+    vector<string> lines = splitOnNewLine(buffer);//Values are seperated by newlines
+
+    string gamerId = lines[0].substr(3);//generated id shall be on the first line
+
+    for (int i = 1; i < lines.size(); ++i) { //possible existing clients on the next lines
         Player player = Player::deserialize(lines[i]);
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->addPlayer(player);
         }
-
     }
+
     try {
         return stoi(gamerId);
     } catch (const invalid_argument& e) {
@@ -77,7 +83,7 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0) 
     this->buffer = new char[bufferSize];
     int gamerId = start();
     cout << "Setting gamer id to " << gamerId <<endl;
-    localState.setGamerId(gamerId);
+    localState.setGamerId(gamerId);//TODO should lock
     cout << "Set the id\n";
 }
 
@@ -177,7 +183,6 @@ void Client::runGameEventLoop() {
                 cout<<"nothing\n";
                 continue;
         }
-        //TODO draw state to screen here
     }
 }
 

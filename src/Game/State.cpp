@@ -5,6 +5,7 @@
 #include "../../include/Game/State.h"
 
 using namespace std;
+
 void State::addPlayer(Player player) {
     players.push_back(player);
 }
