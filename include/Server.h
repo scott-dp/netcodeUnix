@@ -18,8 +18,12 @@ public:
     Server(int bufferSize, int serverPort);
     ~Server();
     void runEventLoop();
+    State* getState();
 private:
+    void drawLoop();
     mutex clientAddressMutex;
+    mutex playerIdLock;
+    mutex stateLock;
     State authoritativeState;
     int nextPLayerId = 1;
     void broadcastToClients(string message, sockaddr_in sender);

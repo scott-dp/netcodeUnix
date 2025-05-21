@@ -18,6 +18,12 @@ private:
     int ySpeed;
 public:
     void setId(int id);
+    int getXSpeed();
+    int getYSpeed();
+    int getXPos();
+    int getYPos();
+    void setXPos(int newXPos);
+    void setYPos(int newYPos);
     Player() = default;
     Player(int id, int xPos, int yPos);
     int getId();

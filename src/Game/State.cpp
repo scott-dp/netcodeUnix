@@ -13,4 +13,26 @@ void State::updateState() {
     }
 }
 
+void State::updatePlayer(Player playerUpdate) {
+    Player* playerToUpdate = getPlayerWithId(playerUpdate.getId());
+    playerToUpdate->updateXSpeed(playerUpdate.getXSpeed());
+    playerToUpdate->updateYSpeed(playerUpdate.getYSpeed());
+    playerToUpdate->setXPos(playerUpdate.getXPos());
+    playerToUpdate->setYPos(playerUpdate.getYPos());
+
+}
+
+Player *State::getPlayerWithId(int id) {
+    for (auto &player : players) {
+        if (player.getId() == id) {
+            return &player;
+        }
+    }
+    return nullptr;
+}
+
+void State::drawState() {
+
+}
+
 

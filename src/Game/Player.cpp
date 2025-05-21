@@ -66,3 +66,29 @@ Player Player::deserialize(const string& serializedPlayer) {
 void Player::setId(int id) {
     this->id = id;
 }
+
+int Player::getXSpeed() {
+    return xSpeed;
+}
+
+int Player::getYSpeed() {
+    return ySpeed;
+}
+
+int Player::getXPos() {
+    return xPos;
+}
+
+int Player::getYPos() {
+    return yPos;
+}
+
+void Player::setXPos(int newXPos) {
+    //TODO add validation
+    this->xPos = newXPos;
+}
+
+void Player::setYPos(int newYPos) {
+    //TODO add validation
+    this->yPos = newYPos;
+}

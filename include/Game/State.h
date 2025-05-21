@@ -14,8 +14,11 @@ using namespace std;
 class State {
 public:
     vector<Player> players;
+    Player* getPlayerWithId(int id);
     void addPlayer(Player player);
+    void updatePlayer(Player playerUpdate);
     void updateState();
+    void drawState();
 private:
 };
 

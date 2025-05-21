@@ -88,18 +88,33 @@ sockaddr_in Server::receiveMessage() {
 void Server::addClient(sockaddr_in client) {
     lock_guard<mutex> lock(clientAddressMutex);
     clientAddresses.insert(client);
-    //unlocks mutex here bcuz out of scope
 }
 
 void Server::broadcastToClients(string message, sockaddr_in sender) {
     sockaddr_in_comparator socketAddressComparator;
     if (message == "idgen") {
         //The first message a client sends and the client is requesting the server to generate a gamer id
-        string answer="id:" + to_string(++nextPLayerId);//TODO lock nextPlayerId or smt
+        string answer="id:";
+        int playerId;
+        {
+            //In case to clients request an id at the same time
+            lock_guard<mutex> lock(playerIdLock);
+            playerId = ++nextPLayerId;
+
+        }
+        answer += to_string(playerId);
         sendMessageToClient(sender, answer);
         return;
     }
     //TODO legitimate the message
+    Player playerUpdate = Player::deserialize(message);
+
+    {
+        lock_guard<mutex> lock(stateLock);
+        authoritativeState.updatePlayer(playerUpdate);
+    }
+
+
 
     unique_lock<mutex> lock(clientAddressMutex);
     auto clientAddressesCopy = clientAddresses;
@@ -116,6 +131,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
 
 void Server::runEventLoop() {
     start();
+    thread(&Server::drawLoop, this).detach();
     while (true) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         string message = buffer;//This should be a copy of the message from a client
@@ -123,7 +139,23 @@ void Server::runEventLoop() {
     }
 }
 
+void Server::drawLoop() {
+    while (true) {
+        State stateCopy;
+        {
+            std::lock_guard<std::mutex> lock(stateLock);
+            stateCopy = authoritativeState;//copy of the current state
+        }
+        stateCopy.drawState();
+        this_thread::sleep_for(chrono::milliseconds(16));
+    }
+}
+
 Server::~Server() {
     closesocket(socketFileDescriptor);
     WSACleanup();
+}
+
+State *Server::getState() {
+    return &authoritativeState;
 }
