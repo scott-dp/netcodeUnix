@@ -192,7 +192,7 @@ void Server::listenForQuitCommand() {
 }
 
 void Server::drawLoop() {
-    while (true) {
+    while (runServer) {
         State stateCopy;
         {
             lock_guard<mutex> lock(stateLock);
