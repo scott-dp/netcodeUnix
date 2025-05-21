@@ -8,6 +8,7 @@ void State::addPlayer(Player player) {
 }
 
 void State::updateState() {
+    //TODO do a legal movement check on client side, not server side
     for (auto player : players) {
         player.updatePosition();
     }

@@ -188,15 +188,40 @@ void Client::runEventLoop() {
 
     threads.emplace_back(&Client::runGameEventLoop, this);
     threads.emplace_back(&Client::runReceiveLoop, this);
+    threads.emplace_back(&Client::runDrawLoop, this);
 
     for (auto &thread : threads) {
         thread.join();
     }
 }
 
+void Client::runDrawLoop() {
+    while (true) {
+        State* stateCopy;
+        {
+            std::lock_guard<std::mutex> lock(localStateMutex);
+            stateCopy = localState.getState();//copy of the current state
+        }
+        stateCopy->drawState();
+        this_thread::sleep_for(chrono::milliseconds(16));
+    }
+}
+
 void Client::checkState(string message) {
     //TODO check the position update and compare it to the localState
     Player playerUpdate = Player::deserialize(message);
-    lock_guard<mutex> lock(localStateMutex);
+    State* stateCopy;
+    {
+        std::lock_guard<std::mutex> lock(localStateMutex);
+        stateCopy = localState.getState();//copy of the current state
+    }
+    Player* predictedPlayer = stateCopy->getPlayerWithId(playerUpdate.getId());
+    if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()) {
+        //TODO: wrong prediciton, need to rollback
+        {
+            lock_guard<mutex> lock(localStateMutex);
+            localState.getState()->updatePlayer(playerUpdate); //The rollback
+        }
+    }
 }
 

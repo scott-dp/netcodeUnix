@@ -18,7 +18,6 @@ public:
     Server(int bufferSize, int serverPort);
     ~Server();
     void runEventLoop();
-    State* getState();
 private:
     void drawLoop();
     mutex clientAddressMutex;

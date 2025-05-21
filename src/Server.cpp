@@ -155,7 +155,3 @@ Server::~Server() {
     closesocket(socketFileDescriptor);
     WSACleanup();
 }
-
-State *Server::getState() {
-    return &authoritativeState;
-}

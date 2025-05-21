@@ -16,6 +16,7 @@ public:
     ~Client();
     void runEventLoop();
 private:
+    void runDrawLoop();
     void runGameEventLoop();
     void runReceiveLoop();
     void checkState(string message);
