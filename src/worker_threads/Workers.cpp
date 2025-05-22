@@ -23,6 +23,7 @@ void Workers::post(function<void()> threadTask) {
 void Workers::join() {
     //Join all threads
     stopRunning = true;
+    cv.notify_all();
     for (auto &t : worker_threads) {
         cv.notify_one();
         t.join();

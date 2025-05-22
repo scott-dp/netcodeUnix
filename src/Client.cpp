@@ -41,6 +41,12 @@ int Client::start() {
         WSACleanup();
         throw runtime_error("Invalid IP address");
     }
+    //add timeout to the socket
+    DWORD timeout = 5000;
+    if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_RCVTIMEO,
+                   (const char*)&timeout, sizeof(timeout)) == SOCKET_ERROR) {
+        cerr << "Failed to set socket timeout: " << WSAGetLastError() << endl;
+    }
 
     sendMessageToServer("idgen");//requesting a generated id from the server
     receiveFromServer(); //Generated gamer id should now be in the client buffer on the form id:xx, as well as other clients serialized
@@ -106,6 +112,18 @@ void Client::receiveFromServer() {
     int serverAddressLength = sizeof(serverAddress);
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
                                  0, (struct sockaddr *) &serverAddress, &serverAddressLength);
+
+    if (receivedBytes == SOCKET_ERROR) {
+        int error = WSAGetLastError();
+        if (error == WSAETIMEDOUT) {
+            //socket timeout
+            return;
+        }
+        cerr << "recvfrom failed with error: " << error << endl;
+        closesocket(socketFileDescriptor);
+        WSACleanup();
+        throw runtime_error("Failed to receive bytes");
+    }
 
     if (receivedBytes >= 1023) {
         throw runtime_error("Too many bytes received, buffer overflow");
@@ -201,9 +219,13 @@ void Client::runEventLoop() {
 
     for (auto &thread: threads) {
         thread.join();
+        cout << "Joining threads\n";
+
     }
 
     workers.join();
+    cout << "Joining threads\n";
+
 
     //TODO make server remove this client after this client stops the game
 }
@@ -217,7 +239,7 @@ void Client::runDrawLoop() {
             stateCopy = localState.getState();//copy of the current state
         }
         stateCopy->drawState();
-        this_thread::sleep_for(chrono::milliseconds(500)); //1fps
+        this_thread::sleep_for(chrono::milliseconds(500)); //2fps
     }
 }
 
