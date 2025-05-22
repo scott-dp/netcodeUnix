@@ -8,6 +8,7 @@
 #define EKSAMEN_LOCALSTATE_H
 class LocalState {
 public:
+    LocalState() = default;
     explicit LocalState(int playerId);
     void setGamerId(int id);
     Player* getMyPlayer();

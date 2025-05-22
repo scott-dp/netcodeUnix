@@ -21,6 +21,7 @@ public:
     ~Server();
     void runEventLoop();
 private:
+    string serializeAllPlayers(State state);
     Workers workers;
     void listenForQuitCommand();
     void idGenerationResponse(sockaddr_in sender);

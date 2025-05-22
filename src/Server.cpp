@@ -9,6 +9,7 @@
 
 
 #pragma comment(lib, "ws2_32.lib")
+
 #include "../include/Server.h"
 
 using namespace std;
@@ -24,11 +25,11 @@ void Server::start() {
         exit(EXIT_FAILURE);
     }
 
-    serverAddress.sin_family    = AF_INET; // IPv4
+    serverAddress.sin_family = AF_INET; // IPv4
     serverAddress.sin_addr.s_addr = INADDR_ANY;
     serverAddress.sin_port = htons(serverPort); //server runs on port 8080
 
-    if (bind(socketFileDescriptor, (const struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
+    if (bind(socketFileDescriptor, (const struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) {
         cerr << "Couldnt bind socket, please try again" << endl;
         exit(EXIT_FAILURE);
     }
@@ -54,7 +55,7 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
            0, (const struct sockaddr *) &clientSocketAddress,
            sizeof(clientSocketAddress));
 
-    cout<<"message: "<<message<<". sent from server to client."<<endl;
+    cout << "message: " << message << ". sent from server to client." << endl;
 }
 
 sockaddr_in Server::receiveMessage() {
@@ -64,7 +65,7 @@ sockaddr_in Server::receiveMessage() {
 
 
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
-                                 0, (struct sockaddr *)&clientAddress,
+                                 0, (struct sockaddr *) &clientAddress,
                                  &clientAddressLength);
 
 
@@ -93,7 +94,7 @@ void Server::addClient(sockaddr_in client) {
 }
 
 void Server::idGenerationResponse(sockaddr_in sender) {
-    string answer="id:";
+    string answer = "id:";
     int playerId;
     {
         //In case clients request an id at the same time
@@ -101,7 +102,7 @@ void Server::idGenerationResponse(sockaddr_in sender) {
         playerId = ++nextPLayerId;
 
     }
-    answer += to_string(playerId);
+    answer += to_string(playerId) +"\n";
     State stateCopy;
     Player *newPlayer;
     {
@@ -110,16 +111,19 @@ void Server::idGenerationResponse(sockaddr_in sender) {
         authoritativeState.addPlayer(*newPlayer);
         stateCopy = authoritativeState;
     }
-    for (auto player : stateCopy.players) {
-        if (player.getId() != playerId) {
-            //All other connected clients
-            answer += "\n";
-            answer += player.serialize();
-        }
-    }
+    answer += serializeAllPlayers(stateCopy);
     sendMessageToClient(sender, answer);
     broadcastToClients(newPlayer->serialize(), sender); //Let all other clients know that a new client is connected
     return;
+}
+
+string Server::serializeAllPlayers(State state) {
+    string answer;
+    for (auto player: state.players) {
+        answer += player.serialize();
+        answer += "\n";
+    }
+    return answer;
 }
 
 void Server::broadcastToClients(string message, sockaddr_in sender) {
@@ -129,14 +133,12 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
         idGenerationResponse(sender);
         return;
     }
-    cout << "Updating the player with the given update: " << message << "\n";
     Player playerUpdate = Player::deserialize(message);
-    cout << "Deserialized message and got player: " <<
-    playerUpdate.getId() << playerUpdate.getXPos() << playerUpdate.getYPos() <<
-    playerUpdate.getXSpeed() << playerUpdate.getYSpeed() << "\n";
+    State stateCopy;
     {
         lock_guard<mutex> lock(stateLock);
         authoritativeState.updatePlayer(playerUpdate);
+        stateCopy = authoritativeState;
     }
 
     cout << "Updated the auth state\n";
@@ -145,12 +147,8 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     lock.unlock();
     cout << "Copied client address to the set\n";
     this_thread::sleep_for(chrono::milliseconds(5000)); //to introduce lag to so show the rollback feature
-
-    for(auto client : clientAddressesCopy) {
-        if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
-            //Client equals sender, doesn't need to get its own update
-            continue;
-        }
+    message = serializeAllPlayers(stateCopy);
+    for (auto client: clientAddressesCopy) {
         sendMessageToClient(client, message);
     }
     cout << "Broadcasted update sucess\n";
@@ -165,14 +163,14 @@ void Server::runEventLoop() {
     while (runServer) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
         string message = buffer;//This should be a copy of the message from a client
-        cout << "Message copy: " <<message<<"\n";
+        cout << "Message copy: " << message << "\n";
         workers.post([this, message, sender]() {
             this->broadcastToClients(message, sender);
         });
     }
 
 
-    for(auto &thread : threads) {
+    for (auto &thread: threads) {
         thread.join();
     }
 
