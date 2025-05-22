@@ -49,7 +49,8 @@ int Client::start() {
 int Client::parseIdGenerationMessage() {
     vector<string> lines = splitOnNewLine(buffer);//Values are seperated by newlines
 
-    string gamerId = lines[0].substr(3);//generated id shall be on the first line
+    string gamerIdString = lines[0].substr(3);//generated id shall be on the first line
+    int gamerId = stoi(gamerIdString);
 
     LocalState stateCopy;
     {
@@ -60,22 +61,15 @@ int Client::parseIdGenerationMessage() {
     for (int i = 1; i < lines.size(); ++i) { //possible existing clients on the next lines
         Player player = Player::deserialize(lines[i]);
 
-        if (player.getId() == stateCopy.getMyPlayer()->getId()) continue; //Dont add my player
+        if (player.getId() == gamerId) continue; //Dont add my player
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->addPlayer(player);
+            cout << "Added player " << player.getId() << endl;
         }
     }
 
-    try {
-        return stoi(gamerId);
-    } catch (const invalid_argument& e) {
-        cerr << "Invalid argument: input is not a valid integer. The input is: " << gamerId << "\n";
-        throw runtime_error("invalid gamer id");
-    } catch (const out_of_range& e) {
-        cerr << "Out of range: input is too large or too small for an int. The input is: " << gamerId << "\n";
-        throw runtime_error("invalid gamer id");
-    }
+    return gamerId;
 }
 
 Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0), workers(4) {
@@ -248,15 +242,10 @@ void Client::checkState(string message) {
         } else if (predictedPlayer->getXPos() != player.getXPos() || predictedPlayer->getYPos() != player.getYPos()
                    || predictedPlayer->getYSpeed() != player.getYSpeed() || predictedPlayer->getXSpeed() != player.getXSpeed()) {
             {
-                lock_guard<mutex> lock(localStateMutex);
+                lock_guard<mutex> lock(localStateMutex);//TODO worker threads do this?
                 localState.getState()->updatePlayer(player); //The rollback
             }
         }
-    }
-    //Check if the update is a new player, then add the player
-    if () {
-        //wrong prediciton, need to rollback
-        cout << "Rolling back\n";
     }
 }
 

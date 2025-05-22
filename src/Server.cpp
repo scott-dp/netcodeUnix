@@ -102,7 +102,7 @@ void Server::idGenerationResponse(sockaddr_in sender) {
         playerId = ++nextPLayerId;
 
     }
-    answer += to_string(playerId);
+    answer += to_string(playerId) +"\n";
     State stateCopy;
     Player *newPlayer;
     {
