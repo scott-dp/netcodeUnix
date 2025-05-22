@@ -27,32 +27,16 @@ jobs:
         with:
           version: "18.1.0"
 
-      - name: Setup Ninja
-        uses: ashutoshvarma/setup-ninja@master
-
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -G Ninja
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
 
       - name: Build
         # Build your program with the given configuration
         run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
 
-
-      - name: Run clang-tidy 1
-        run: |
-            # Copy compile_commands.json to root for clang-tidy
-            copy ${{github.workspace}}\build\compile_commands.json ${{github.workspace}}\compile_commands.json
-            
-            # Run clang-tidy on all cpp files
-            Get-ChildItem -Path src -Filter *.cpp | ForEach-Object {
-              Write-Host "Running clang-tidy on $($_.Name)"
-              clang-tidy $_.FullName
-            }
-        shell: powershell
-
-      - name: Run clang-tidy (alternative with specific checks) 2
+      - name: Run clang-tidy
         run: |
                 # Run with specific checks and treat warnings as errors
                 clang-tidy src/*.cpp -p=${{github.workspace}}/build --checks="-*,readability-*,performance-*,modernize-*,bugprone-*" --warnings-as-errors="*"
