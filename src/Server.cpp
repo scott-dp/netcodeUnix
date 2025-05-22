@@ -35,6 +35,13 @@ void Server::start() {
     }
 
     cout << "Socket bind success\n";
+
+    //add timeout to the socket
+    DWORD timeout = 1000;
+    if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_RCVTIMEO,
+                   (const char*)&timeout, sizeof(timeout)) == SOCKET_ERROR) {
+        cerr << "Failed to set socket timeout: " << WSAGetLastError() << endl;
+    }
 }
 
 Server::Server(int bufferSize, int serverPort) : workers(4) {
@@ -70,7 +77,13 @@ sockaddr_in Server::receiveMessage() {
 
 
     if (receivedBytes == SOCKET_ERROR) {
-        cerr << "recvfrom failed with error: " << WSAGetLastError() << endl;
+        int error = WSAGetLastError();
+        if (error == WSAETIMEDOUT) {
+            //socket timeout
+            memset(&clientAddress, 0, sizeof(clientAddress));
+            return clientAddress;
+        }
+        cerr << "recvfrom failed with error: " << error << endl;
         closesocket(socketFileDescriptor);
         WSACleanup();
         throw runtime_error("Failed to receive bytes");
@@ -162,6 +175,9 @@ void Server::runEventLoop() {
 
     while (runServer) {
         sockaddr_in sender = receiveMessage(); //Message lies in buffer
+
+        if (sender.sin_addr.s_addr == 0) continue; //Socket timeout
+
         string message = buffer;//This should be a copy of the message from a client
         cout << "Message copy: " << message << "\n";
         workers.post([this, message, sender]() {
