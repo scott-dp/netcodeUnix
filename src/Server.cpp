@@ -29,7 +29,7 @@ void Server::start() {
     serverAddress.sin_addr.s_addr = INADDR_ANY;
     serverAddress.sin_port = htons(serverPort); //server runs on port 8080
 
-    if (bind(socketFileDescriptor, (const struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) {
+    if (bind(socketFileDescriptor, (const struct sockaddr *) &serverAddress, sizeof(serverAddress)) == SOCKET_ERROR) {
         cerr << "Couldnt bind socket, please try again" << endl;
         exit(EXIT_FAILURE);
     }
