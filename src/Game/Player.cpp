@@ -55,10 +55,10 @@ string Player::serialize() {
 void Player::updatePosition() {
     int newX = xPos + xSpeed;
     int newY = yPos + ySpeed;
-    if (newX >= 100 || newX < 0) {
+    if (newX >= 50 || newX < 0) {
         return;
     }
-    if (newY >= 100 || newY < 0) {
+    if (newY >= 50 || newY < 0) {
         return;
     }
     xPos += xSpeed;

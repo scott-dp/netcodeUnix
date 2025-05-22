@@ -11,7 +11,6 @@ void State::addPlayer(Player player) {
 }
 
 void State::updateState() {
-    //TODO do a legal movement check on client side, not server side
     for (auto &player : players) {
         player.updatePosition();
     }
@@ -38,7 +37,7 @@ Player *State::getPlayerWithId(int id) {
 
 void State::drawState() {
     const int width = 100;
-    const int height = 100;
+    const int height = 50;
 
     //move cursor to top left
     cout << "\033[H";
