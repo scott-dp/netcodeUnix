@@ -133,14 +133,12 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
         idGenerationResponse(sender);
         return;
     }
-    cout << "Updating the player with the given update: " << message << "\n";
     Player playerUpdate = Player::deserialize(message);
-    cout << "Deserialized message and got player: " <<
-         playerUpdate.getId() << playerUpdate.getXPos() << playerUpdate.getYPos() <<
-         playerUpdate.getXSpeed() << playerUpdate.getYSpeed() << "\n";
+    State stateCopy;
     {
         lock_guard<mutex> lock(stateLock);
         authoritativeState.updatePlayer(playerUpdate);
+        stateCopy = authoritativeState;
     }
 
     cout << "Updated the auth state\n";
@@ -149,7 +147,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     lock.unlock();
     cout << "Copied client address to the set\n";
     this_thread::sleep_for(chrono::milliseconds(5000)); //to introduce lag to so show the rollback feature
-
+    message = serializeAllPlayers(stateCopy);
     for (auto client: clientAddressesCopy) {
         if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
             //Client equals sender, doesn't need to get its own update
