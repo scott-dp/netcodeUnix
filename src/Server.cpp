@@ -149,10 +149,6 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     this_thread::sleep_for(chrono::milliseconds(5000)); //to introduce lag to so show the rollback feature
     message = serializeAllPlayers(stateCopy);
     for (auto client: clientAddressesCopy) {
-        if (!socketAddressComparator(client, sender) && !socketAddressComparator(sender, client)) {
-            //Client equals sender, doesn't need to get its own update
-            continue;
-        }
         sendMessageToClient(client, message);
     }
     cout << "Broadcasted update sucess\n";
