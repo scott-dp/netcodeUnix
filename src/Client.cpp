@@ -9,6 +9,7 @@
 #include <sstream>
 
 #pragma comment(lib, "ws2_32.lib")
+
 #include "../include/Client.h"
 
 using namespace std;
@@ -85,7 +86,7 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0),
     this->serverIp = serverIp;
     this->buffer = new char[bufferSize];
     int gamerId = start();
-    cout << "Setting gamer id to " << gamerId <<endl;
+    cout << "Setting gamer id to " << gamerId << endl;
     {
         lock_guard<mutex> lock(localStateMutex);
         localState.setGamerId(gamerId);
@@ -96,21 +97,21 @@ Client::Client(int bufferSize, int serverPort, string serverIp) : localState(0),
 void Client::sendMessageToServer(string message) {
     sendto(socketFileDescriptor, message.c_str(),
            message.length(), 0,
-           (const struct sockaddr*)&serverAddress, sizeof(serverAddress));
+           (const struct sockaddr *) &serverAddress, sizeof(serverAddress));
 
-    cout << "Sent: " <<message << " to server\n";
+    cout << "Sent: " << message << " to server\n";
 }
 
 void Client::receiveFromServer() {
     int serverAddressLength = sizeof(serverAddress);
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
-                                 0, (struct sockaddr*)&serverAddress, &serverAddressLength);
+                                 0, (struct sockaddr *) &serverAddress, &serverAddressLength);
 
     if (receivedBytes >= 1023) {
         throw runtime_error("Too many bytes received, buffer overflow");
     }
 
-    buffer[receivedBytes]  = '\0';
+    buffer[receivedBytes] = '\0';
 
     cout << "Received: " << buffer << endl;
     if (buffer[0] == 'i' && buffer[1] == 'd' && buffer[2] == ':') {
@@ -144,7 +145,7 @@ void Client::runGameEventLoop() {
                 break;
             }
             case 'a':
-            case 'A':{
+            case 'A': {
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(-1);
@@ -154,7 +155,7 @@ void Client::runGameEventLoop() {
                 break;
             }
             case 's':
-            case 'S':{
+            case 'S': {
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateYSpeed(1);
@@ -164,7 +165,7 @@ void Client::runGameEventLoop() {
                 break;
             }
             case 'd':
-            case 'D':{
+            case 'D': {
                 unique_lock<mutex> lock(localStateMutex);
                 player = localState.getMyPlayer();
                 player->updateXSpeed(1);
@@ -179,7 +180,7 @@ void Client::runGameEventLoop() {
                 runClient = false;
                 return;
             default:
-                cout<<"nothing\n";
+                cout << "nothing\n";
                 continue;
         }
     }
@@ -198,7 +199,7 @@ void Client::runEventLoop() {
     threads.emplace_back(&Client::runReceiveLoop, this);
     threads.emplace_back(&Client::runDrawLoop, this);
 
-    for (auto &thread : threads) {
+    for (auto &thread: threads) {
         thread.join();
     }
 
@@ -209,7 +210,7 @@ void Client::runEventLoop() {
 
 void Client::runDrawLoop() {
     while (runClient) {
-        State* stateCopy;
+        State *stateCopy;
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->updateState();
@@ -221,30 +222,30 @@ void Client::runDrawLoop() {
 }
 
 void Client::checkState(string message) {
-    vector<Player> playersUpdates = parsePlayerUpdates(message); //The players from server authoritative state
-    State* stateCopy;
+    vector<Player> playersUpdates = parsePlayerUpdates(
+            std::move(message)); //The players from server authoritative state
+    State *stateCopy;
     {
         std::lock_guard<std::mutex> lock(localStateMutex);
         stateCopy = localState.getState();//copy of the current state
     }
 
     /**
-     *     Loop that checks every player and checks if updating is needed
+     *     Loop that checks every player and checks if updating of local state is needed compared to the server state
      *     This almost certainly will always rollback, because the network delay will cause differences.
      */
-    for (auto player : playersUpdates) {
-        Player* predictedPlayer = stateCopy->getPlayerWithId(player.getId());
-        if (predictedPlayer == nullptr) { //The current player is new, this client's has never seen it before
+    for (auto player: playersUpdates) {
+        Player *predictedPlayer = stateCopy->getPlayerWithId(player.getId());
+        if (predictedPlayer == nullptr) { //player is new, this client's has never seen it before
             {//Add the player to the local state
                 lock_guard<mutex> lock(localStateMutex); //TODO Let a worker thread do this?
                 localState.getState()->addPlayer(player);
             }
         } else if (predictedPlayer->getXPos() != player.getXPos() || predictedPlayer->getYPos() != player.getYPos()
-                   || predictedPlayer->getYSpeed() != player.getYSpeed() || predictedPlayer->getXSpeed() != player.getXSpeed()) {
-            {
-                lock_guard<mutex> lock(localStateMutex);//TODO worker threads do this?
-                localState.getState()->updatePlayer(player); //The rollback
-            }
+                   || predictedPlayer->getYSpeed() != player.getYSpeed() ||
+                   predictedPlayer->getXSpeed() != player.getXSpeed()) {
+            lock_guard<mutex> lock(localStateMutex);//TODO worker threads do this?
+            localState.getState()->updatePlayer(player); //The rollback
         }
     }
 }
@@ -264,7 +265,7 @@ vector<string> Client::splitOnNewLine(const string &input) {
 vector<Player> Client::parsePlayerUpdates(string serverUpdate) {
     vector<string> playersSerialized = splitOnNewLine(serverUpdate);
     vector<Player> playersUpdated;
-    for (const string& player : playersSerialized) {
+    for (const string &player: playersSerialized) {
         playersUpdated.push_back(Player::deserialize(player));
     }
     return playersUpdated;
