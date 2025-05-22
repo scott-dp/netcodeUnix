@@ -219,14 +219,8 @@ void Client::runEventLoop() {
 
     for (auto &thread: threads) {
         thread.join();
-        cout << "Joining threads\n";
-
     }
-
     workers.join();
-    cout << "Joining threads\n";
-
-
     //TODO make server remove this client after this client stops the game
 }
 
