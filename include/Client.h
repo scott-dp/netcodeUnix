@@ -18,6 +18,7 @@ public:
     ~Client();
     void runEventLoop();
 private:
+    vector<Player> parsePlayerUpdates(string serverUpdate);
     Workers workers;
     atomic<boolean> runClient = true;
     int parseIdGenerationMessage();

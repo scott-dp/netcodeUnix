@@ -51,8 +51,16 @@ int Client::parseIdGenerationMessage() {
 
     string gamerId = lines[0].substr(3);//generated id shall be on the first line
 
+    LocalState stateCopy;
+    {
+        lock_guard<mutex> lock(localStateMutex);
+        stateCopy = localState;
+    }
+
     for (int i = 1; i < lines.size(); ++i) { //possible existing clients on the next lines
         Player player = Player::deserialize(lines[i]);
+
+        if (player.getId() == stateCopy.getMyPlayer()->getId()) continue; //Dont add my player
         {
             lock_guard<mutex> lock(localStateMutex);
             localState.getState()->addPlayer(player);
@@ -219,30 +227,36 @@ void Client::runDrawLoop() {
 }
 
 void Client::checkState(string message) {
-    Player playerUpdate = Player::deserialize(message);
+    vector<Player> playersUpdates = parsePlayerUpdates(message); //The players from server authoritative state
     State* stateCopy;
     {
         std::lock_guard<std::mutex> lock(localStateMutex);
         stateCopy = localState.getState();//copy of the current state
     }
 
-    Player* predictedPlayer = stateCopy->getPlayerWithId(playerUpdate.getId());
-    //Check if the update is a new player, then add the player
-    if (predictedPlayer == nullptr) {
-        {
-            lock_guard<mutex> lock(localStateMutex);
-            localState.getState()->addPlayer(playerUpdate);
+    /**
+     *     Loop that checks every player and checks if updating is needed
+     *     This almost certainly will always rollback, because the network delay will cause differences.
+     */
+    for (auto player : playersUpdates) {
+        Player* predictedPlayer = stateCopy->getPlayerWithId(player.getId());
+        if (predictedPlayer == nullptr) { //The current player is new, this client's has never seen it before
+            {//Add the player to the local state
+                lock_guard<mutex> lock(localStateMutex); //TODO Let a worker thread do this?
+                localState.getState()->addPlayer(player);
+            }
+        } else if (predictedPlayer->getXPos() != player.getXPos() || predictedPlayer->getYPos() != player.getYPos()
+                   || predictedPlayer->getYSpeed() != player.getYSpeed() || predictedPlayer->getXSpeed() != player.getXSpeed()) {
+            {
+                lock_guard<mutex> lock(localStateMutex);
+                localState.getState()->updatePlayer(player); //The rollback
+            }
         }
-        return;
     }
-    if (predictedPlayer->getXPos() != playerUpdate.getXPos() || predictedPlayer->getYPos() != playerUpdate.getYPos()
-    || predictedPlayer->getYSpeed() != playerUpdate.getYSpeed() || predictedPlayer->getXSpeed() != playerUpdate.getXSpeed()) {
+    //Check if the update is a new player, then add the player
+    if () {
         //wrong prediciton, need to rollback
         cout << "Rolling back\n";
-        {
-            lock_guard<mutex> lock(localStateMutex);
-            localState.getState()->updatePlayer(playerUpdate); //The rollback
-        }
     }
 }
 
@@ -252,9 +266,18 @@ vector<string> Client::splitOnNewLine(const string &input) {
     string line;
 
     while (getline(stream, line)) {
-        lines.push_back(line);
+        if (!line.empty()) lines.push_back(line); //Dont push empty lines
     }
 
     return lines;
+}
+
+vector<Player> Client::parsePlayerUpdates(string serverUpdate) {
+    vector<string> playersSerialized = splitOnNewLine(serverUpdate);
+    vector<Player> playersUpdated;
+    for (const string& player : playersSerialized) {
+        playersUpdated.push_back(Player::deserialize(player));
+    }
+    return playersUpdated;
 }
 
