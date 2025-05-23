@@ -77,17 +77,14 @@ sockaddr_in Server::receiveMessage() {
                                  &clientAddressLength);
 
 
-    if (receivedBytes == SOCKET_ERROR) {
-        int error = WSAGetLastError();
-        if (error == WSAETIMEDOUT) {
-            //socket timeout
-            memset(&clientAddress, 0, sizeof(clientAddress));
-            return clientAddress;
+    if (receivedBytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            // timeout
+        } else {
+            perror("recvfrom failed");
+            close(socketFileDescriptor);
+            throw runtime_error("Failed to receive bytes");
         }
-        cerr << "recvfrom failed with error: " << error << endl;
-        closesocket(socketFileDescriptor);
-        WSACleanup();
-        throw runtime_error("Failed to receive bytes");
     }
 
     if (receivedBytes >= 1023) {
@@ -160,7 +157,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
     cout << "Copied client address to the set\n";
-    this_thread::sleep_for(chrono::milliseconds(5000)); //to introduce lag to so show the rollback feature
+    this_thread::sleep_for(chrono::milliseconds(500)); //to introduce lag to so show the rollback feature
     message = serializeAllPlayers(stateCopy);
     for (auto client: clientAddressesCopy) {
         sendMessageToClient(client, message);
@@ -196,7 +193,7 @@ void Server::runEventLoop() {
 
 void Server::listenForQuitCommand() {
     while (runServer) {
-        char ch = _getch();
+        int ch = getch();
         switch (ch) {
             case 'q':
             case 'Q':
@@ -221,6 +218,17 @@ void Server::drawLoop() {
 }
 
 Server::~Server() {
-    closesocket(socketFileDescriptor);
-    WSACleanup();
+    close(socketFileDescriptor);
+}
+
+int Server::getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
 }

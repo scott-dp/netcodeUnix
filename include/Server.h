@@ -21,6 +21,7 @@ public:
     ~Server();
     void runEventLoop();
 private:
+    int getch();
     string serializeAllPlayers(State state);
     Workers workers;
     void listenForQuitCommand();
