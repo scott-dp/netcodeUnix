@@ -17,7 +17,7 @@ jobs:
         run: |
           mkdir -p ~/.ssh
           
-          echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws_key.pem
+          echo "${{ secrets.AWS_KEY }}" > ~/.ssh/aws_key.pem
           
           chmod 600 ~/.ssh/aws_key.pem
           
