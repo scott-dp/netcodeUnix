@@ -44,7 +44,7 @@ private:
      */
     set<sockaddr_in, sockaddr_in_comparator> clientAddresses;
     int bufferSize;
-    atomic<boolean> runServer = true;
+    atomic<bool> runServer = true;
     int socketFileDescriptor;
     struct sockaddr_in serverAddress;
     int serverPort;
