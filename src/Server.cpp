@@ -11,6 +11,8 @@
 #include <iostream>
 #include <thread>
 #include <sstream>
+#include <termios.h>
+#include <unistd.h>
 
 #include "../include/Server.h"
 
