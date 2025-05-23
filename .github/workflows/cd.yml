@@ -15,6 +15,7 @@ jobs:
 
       - name: setup ssh key
         run: |
+          set -x
           mkdir -p ~/.ssh
           
           echo "${{ secrets.AWS_KEY }}" > ~/.ssh/aws_key.pem
