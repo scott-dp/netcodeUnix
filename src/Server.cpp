@@ -1,48 +1,52 @@
 //
 // Created by scott on 19.05.2025.
 //
-#include <winsock2.h>
+#include <sys/socket.h>
+#include <cstring>   // or <string.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>       // for close()
+#include <fcntl.h>        // for non-blocking sockets if needed
+#include <errno.h>        // for error numbers
 #include <iostream>
 #include <thread>
 #include <sstream>
-#include <conio.h>
-
-
-#pragma comment(lib, "ws2_32.lib")
+#include <termios.h>
+#include <unistd.h>
 
 #include "../include/Server.h"
 
 using namespace std;
 
 void Server::start() {
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-
-    socketFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0); //ipv4 udp socket
+    socketFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0); // IPv4 UDP socket
 
     if (socketFileDescriptor < 0) {
-        cerr << "couldn't create server socket, try again" << endl;
+        perror("Couldn't create server socket");
         exit(EXIT_FAILURE);
     }
 
     serverAddress.sin_family = AF_INET; // IPv4
     serverAddress.sin_addr.s_addr = INADDR_ANY;
-    serverAddress.sin_port = htons(serverPort); //server runs on port 8080
+    serverAddress.sin_port = htons(serverPort);
 
-    if (::bind(socketFileDescriptor, (const struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) {
-        cerr << "Couldnt bind socket, please try again" << endl;
+    if (bind(socketFileDescriptor, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) {
+        perror("Couldn't bind socket");
         exit(EXIT_FAILURE);
     }
 
     cout << "Socket bind success\n";
 
-    //add timeout to the socket
-    DWORD timeout = 1000;
-    if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_RCVTIMEO,
-                   (const char*)&timeout, sizeof(timeout)) == SOCKET_ERROR) {
-        cerr << "Failed to set socket timeout: " << WSAGetLastError() << endl;
+    // Set receive timeout 1 second
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("Failed to set socket timeout");
     }
 }
+
 
 Server::Server(int bufferSize, int serverPort) : workers(4) {
     if (bufferSize < 1 || bufferSize > 1024) {
@@ -68,7 +72,7 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
 sockaddr_in Server::receiveMessage() {
     struct sockaddr_in clientAddress{};
     memset(&clientAddress, 0, sizeof(clientAddress));
-    int clientAddressLength = sizeof(clientAddress);
+    socklen_t clientAddressLength = sizeof(clientAddress);
 
 
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
@@ -76,17 +80,14 @@ sockaddr_in Server::receiveMessage() {
                                  &clientAddressLength);
 
 
-    if (receivedBytes == SOCKET_ERROR) {
-        int error = WSAGetLastError();
-        if (error == WSAETIMEDOUT) {
-            //socket timeout
-            memset(&clientAddress, 0, sizeof(clientAddress));
-            return clientAddress;
+    if (receivedBytes < 0) {
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            // timeout
+        } else {
+            perror("recvfrom failed");
+            close(socketFileDescriptor);
+            throw runtime_error("Failed to receive bytes");
         }
-        cerr << "recvfrom failed with error: " << error << endl;
-        closesocket(socketFileDescriptor);
-        WSACleanup();
-        throw runtime_error("Failed to receive bytes");
     }
 
     if (receivedBytes >= 1023) {
@@ -159,7 +160,7 @@ void Server::broadcastToClients(string message, sockaddr_in sender) {
     auto clientAddressesCopy = clientAddresses;
     lock.unlock();
     cout << "Copied client address to the set\n";
-    this_thread::sleep_for(chrono::milliseconds(5000)); //to introduce lag to so show the rollback feature
+    this_thread::sleep_for(chrono::milliseconds(500)); //to introduce lag to so show the rollback feature
     message = serializeAllPlayers(stateCopy);
     for (auto client: clientAddressesCopy) {
         sendMessageToClient(client, message);
@@ -195,7 +196,7 @@ void Server::runEventLoop() {
 
 void Server::listenForQuitCommand() {
     while (runServer) {
-        char ch = _getch();
+        int ch = getch();
         switch (ch) {
             case 'q':
             case 'Q':
@@ -220,6 +221,17 @@ void Server::drawLoop() {
 }
 
 Server::~Server() {
-    closesocket(socketFileDescriptor);
-    WSACleanup();
+    close(socketFileDescriptor);
+}
+
+int Server::getch() {
+    struct termios oldt, newt;
+    int ch;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    ch = getchar();
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    return ch;
 }

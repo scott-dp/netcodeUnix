@@ -1,8 +1,10 @@
 //
 // Created by scott on 19.05.2025.
 //
-#include <winsock2.h>
 #include <vector>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <set>
 #include <mutex>
 #include <atomic>
@@ -21,6 +23,7 @@ public:
     ~Server();
     void runEventLoop();
 private:
+    int getch();
     string serializeAllPlayers(State state);
     Workers workers;
     void listenForQuitCommand();
@@ -41,7 +44,7 @@ private:
      */
     set<sockaddr_in, sockaddr_in_comparator> clientAddresses;
     int bufferSize;
-    atomic<boolean> runServer = true;
+    atomic<bool> runServer = true;
     int socketFileDescriptor;
     struct sockaddr_in serverAddress;
     int serverPort;

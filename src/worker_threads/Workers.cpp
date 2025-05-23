@@ -4,7 +4,6 @@
 
 
 #include <mutex>
-#include <Windows.h>
 #include "../../include/worker_threads/Workers.h"
 
 using namespace std;
