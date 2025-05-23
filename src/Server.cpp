@@ -1,48 +1,49 @@
 //
 // Created by scott on 19.05.2025.
 //
-#include <winsock2.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>       // for close()
+#include <fcntl.h>        // for non-blocking sockets if needed
+#include <errno.h>        // for error numbers
 #include <iostream>
 #include <thread>
 #include <sstream>
-#include <conio.h>
-
-
-#pragma comment(lib, "ws2_32.lib")
 
 #include "../include/Server.h"
 
 using namespace std;
 
 void Server::start() {
-    WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
-
-    socketFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0); //ipv4 udp socket
+    socketFileDescriptor = socket(AF_INET, SOCK_DGRAM, 0); // IPv4 UDP socket
 
     if (socketFileDescriptor < 0) {
-        cerr << "couldn't create server socket, try again" << endl;
+        perror("Couldn't create server socket");
         exit(EXIT_FAILURE);
     }
 
     serverAddress.sin_family = AF_INET; // IPv4
     serverAddress.sin_addr.s_addr = INADDR_ANY;
-    serverAddress.sin_port = htons(serverPort); //server runs on port 8080
+    serverAddress.sin_port = htons(serverPort);
 
-    if (::bind(socketFileDescriptor, (const struct sockaddr *) &serverAddress, sizeof(serverAddress)) < 0) {
-        cerr << "Couldnt bind socket, please try again" << endl;
+    if (bind(socketFileDescriptor, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) < 0) {
+        perror("Couldn't bind socket");
         exit(EXIT_FAILURE);
     }
 
     cout << "Socket bind success\n";
 
-    //add timeout to the socket
-    DWORD timeout = 1000;
-    if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_RCVTIMEO,
-                   (const char*)&timeout, sizeof(timeout)) == SOCKET_ERROR) {
-        cerr << "Failed to set socket timeout: " << WSAGetLastError() << endl;
+    // Set receive timeout 1 second
+    struct timeval timeout;
+    timeout.tv_sec = 1;
+    timeout.tv_usec = 0;
+
+    if (setsockopt(socketFileDescriptor, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) {
+        perror("Failed to set socket timeout");
     }
 }
+
 
 Server::Server(int bufferSize, int serverPort) : workers(4) {
     if (bufferSize < 1 || bufferSize > 1024) {

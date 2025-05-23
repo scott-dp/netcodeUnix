@@ -7,7 +7,7 @@
 
 using namespace std;
 
-const string serverIp = "127.0.0.1";
+const string serverIp = "51.21.197.206";//AWS server
 const int serverPort = 8080;
 const int bufferSize = 1024;
 
