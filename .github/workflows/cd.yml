@@ -1,0 +1,38 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: setup ssh key
+        run: |
+          mkdir -p ~/.ssh
+          
+          echo "${{ secrets.AWS_PRIVATE_KEY }}" > ~/.ssh/aws_key.pem
+          
+          chmod 600 ~/.ssh/aws_key.pem
+          
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          ssh -i ~/.ssh/aws_key.pem ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
+          cd UDPRollbaCPP/netcodeUnix
+          
+          git pull origin main
+          
+          mkdir -p build
+          cd build
+          cmake ..
+          make -j$(nproc)
+          sudo systemctl restart UDPRollbaCPPserver
+          EOF
