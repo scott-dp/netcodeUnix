@@ -2,6 +2,7 @@
 // Created by scott on 19.05.2025.
 //
 #include <sys/socket.h>
+#include <cstring>   // or <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>       // for close()
@@ -69,7 +70,7 @@ void Server::sendMessageToClient(sockaddr_in clientSocketAddress, string message
 sockaddr_in Server::receiveMessage() {
     struct sockaddr_in clientAddress{};
     memset(&clientAddress, 0, sizeof(clientAddress));
-    int clientAddressLength = sizeof(clientAddress);
+    socklen_t clientAddressLength = sizeof(clientAddress);
 
 
     int receivedBytes = recvfrom(socketFileDescriptor, buffer, bufferSize,
