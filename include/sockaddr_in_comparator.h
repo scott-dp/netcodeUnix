@@ -1,8 +1,9 @@
 #ifndef SOCKADDR_IN_COMPARATOR_H
 #define SOCKADDR_IN_COMPARATOR_H
 
-#include <winsock2.h>
-
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 /**
  * returns 0 if the to sockets have the same ip and port, meaning equality
  */
