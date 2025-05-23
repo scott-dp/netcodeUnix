@@ -1,8 +1,10 @@
 //
 // Created by scott on 19.05.2025.
 //
-#include <winsock2.h>
 #include <vector>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <set>
 #include <mutex>
 #include <atomic>
